@@ -1,0 +1,20 @@
+struct foo {
+
+}
+
+enum test {
+
+}
+
+fn add ( a: int b: int ) -< int -> a + b 
+
+fn main () -< int {
+    let three : int = add 1 2
+    let four : int = add three 1   
+
+    four
+
+    ret 0
+}
+
+
