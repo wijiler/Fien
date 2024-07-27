@@ -1,6 +1,5 @@
 # FIEN
 
-- a functional language for graphing and curves with extensible syntax (kinda like lean)
 
 ## basic, simple syntax
 
@@ -23,6 +22,8 @@ import "std/math"
 import "std/graphics"
 
 let sr = 100
+
+
 
 bezier :: [vec2]
 fn bezier ( a:vec2 b:vec2 c:vec2 d:vec2 t:float = 0 ) -< [vec2] {

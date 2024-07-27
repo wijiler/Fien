@@ -433,7 +433,8 @@ lex :: (filename:string) -> [] TOKEN {
             r += 1;
             c = 0;
             case #char " ";;
-            case #char "\t";;
+            case #char "\t";
+            c+= 4;
 
             case #char "^";
             array_add(*tokens,.{"",.carat});
@@ -457,9 +458,10 @@ lex :: (filename:string) -> [] TOKEN {
     return tokens;
 }
 
+
 TOKEN :: struct {
     lexeme:string;
-    type :: enum u8 {
+    tokentype: enum u8 {
         identifier :: 255;
         ret        :: 254;
         let        :: 253;
@@ -498,28 +500,29 @@ TOKEN :: struct {
         type_bool  :: 237;
         type_float :: 236;
        type_string :: 233;
+
+       user        :: 222;
     }
-    tokentype:type;
 }
 
 #scope_file
-
 
 // ! Lexing library
 identifiers: [..] string;
 ltypes: [..] string;
 
 find_enum :: () #expand {
-    i:int = `i;
-    while `file[i] != #char "}" {
-        i += 1;
+    skip:int = 1;
+    e:int = `i;
+    while `file[e] != #char "}" {
+        e += 1;
     }
-    members := string_slice(`file,`i + 1,i - 1);
+    members := string_slice(`file,`i + 1,e - 1);
     members = replace(members,"\t","");
-    members = replace(members,"\n","");
+    members,skip = replace(members,"\n","");
     members = replace(members,"\r","");
     members = replace(members," ","");
-    print("%\n",members);
+    //print("%\n",members);
     a_members := split(members,",");
     for member: a_members {
         if member != "" {
@@ -527,7 +530,31 @@ find_enum :: () #expand {
         array_add(*`tokens,.{member,.identifier});
         }
     }
-    `it = i - 1;
+    `r += skip;
+    `it = e - 1;
+}
+
+find_struct :: () #expand {
+    skip:int = 1;
+    e:int = `i;
+    while `file[e] != #char "}" {
+        e += 1;
+    }
+    members := string_slice(`file,`i + 1,e - 1);
+    members = replace(members,"\t","");
+    members,skip = replace(members,"\n","");
+    members = replace(members,"\r","");
+    members = replace(members," ","");
+    //print("%\n",members);
+    a_members := split(members,";");
+    for member: a_members {
+        if member != "" {
+        array_add(*`identifiers,sprint("%.%",`ident,member));
+        array_add(*`tokens,.{member,.identifier});
+        }
+    }
+    `r += skip;
+    `it = e - 1;
 }
 
 string_slice :: (T:string,from:int,to:int) -> string {
@@ -557,7 +584,7 @@ unknown_token_error :: (r:int,c:int,i:int,file:string) {
     }
     line := builder_to_string(*builder);
     tok := builder_to_string(*tokapp);
-    print("\x1B[1m\x1B[31mError\x1B[0m: Unknown token \"%\" found at line:% column:% \n",tok,r,c);
+    print("\x1B[1m\x1B[31mError\x1B[0m: Unknown token \"%\" found at line:% column:%\n",tok,r,c);
     print("┃\n┃\n└▶ %\n",line);
     spaces:String_Builder;
     carats:String_Builder;

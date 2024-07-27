@@ -1,0 +1,10 @@
+{
+    "local_modules": [
+        "./src/modules"
+    ],
+    "roots": [
+        "./src/first.jai",
+        "./src/main.jai"
+    ],
+    "build_root": "./src/first.jai"
+}

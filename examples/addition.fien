@@ -2,14 +2,16 @@ enum test {
     test,
     one,
 }
+whatthesigma
+struct test {
+    
+}
 
 fn add ( a: int b: int ) -< int -> a + b 
 
 fn main () -< int {
     let three: int = add 1 2
     let four: int = add three 1
-
-
     ret 0
 }
 
