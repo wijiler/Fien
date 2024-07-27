@@ -140,7 +140,22 @@ lex :: (filename:string) -> [] TOKEN {
                 else if lexer_peek(4) == #char "c" && lexer_peek(5) == #char "t" {
                     if is_alnum(lexer_peek(6)) then unknown_token_error(r,c,it,file);
                     array_add(*tokens, .{"",.k_struct});
-                    array_add(*tokens,.{add_type(it+7,true),.type});
+                    // ident
+                    i:int = 6;
+                    while !is_alnum(file[it+i]) {
+                        i += 1;
+                    }
+                    ident := add_type(it+i,true);
+                    array_add(*tokens,.{ident,.type});
+                    // uhh me when the uhhh
+                    j:int = it;
+                    while file[j] != #char "{" {
+                        j += 1;
+                    }
+                    if file[j] == #char "{" {
+                        array_add(*tokens,.{"",.lbrack});
+                        find_struct();
+                    }
                 }
             }
             else {
@@ -163,8 +178,18 @@ lex :: (filename:string) -> [] TOKEN {
             if lexer_peek(1) == #char "n" && lexer_peek(2) == #char "u" && lexer_peek(3) == #char "m" {
                     if is_alnum(lexer_peek(4)) then unknown_token_error(r,c,it,file);
                     array_add(*tokens, .{"",.k_enum});
-                    ident := add_type(it+5,true);
+                    // ident
+                    identcounter:int = 4;
+
+                    while !is_alnum(file[it+identcounter]) {
+                        identcounter += 1;
+                    }
+
+                    ident := add_type(it+identcounter,true);
                     array_add(*tokens,.{ident,.type});
+
+                    // find the enum's members and add them as valid types and identifiers
+                    // TODO: make $IDENT$. a type and the types valid identifiers? Might be easier for the parser
                     i:int = it;
                     while file[i] != #char "{" {
                         i += 1;
@@ -599,12 +624,6 @@ unknown_token_error :: (r:int,c:int,i:int,file:string) {
     print("  %1%",builder_to_string(*spaces),carats_s);
     exit(0);
 }
-
-// skip_whitespace :: () #expand {
-//     if is_whitespace(`file[`it]) {
-//         `it += 1;
-//     }
-// }
 
 is_whitespace :: (char:u8) -> bool {
     if char == #char " " || char == #char "\t" {

@@ -16,8 +16,10 @@ main :: () {
             case;;
         }
     }
-    
-    print("%",lex(input));
+    tokens := lex(input);
+    for token:tokens {
+        print("%\n",token);
+    }
 
 }
 
