@@ -3,14 +3,20 @@ enum wah {
     one,
 }
 
-struct test {
+
+struct foo {
+    bar:int
+
+    struct cock {
+        balls:int
+    }
 }
 
 fn add ( a: int b: int ) -< int -> a + b 
 
 fn main () -< int {
     let three: int = add 1 2
-    let four: int = add three 1
+    let four: int = add three 1 
+    let add: int = 1 + 2
     ret 0
 }
-
