@@ -1,33 +1,51 @@
+r:int = 1;
+c:int = 1;
+
+message:MESSAGE = .DEFAULT;
+
+MESSAGE :: enum u8 {
+    DEFAULT       :: 0;
+    SCOPED_STRUCT :: 1;
+    SCOPED_FN     :: 2;
+    SCOPED_ENUM   :: 3;
+    SCOPED_IF     :: 4;
+    SCOPED_ELSE   :: 5;
+
+
+
+    GLOBAL        :: 255;
+}
+
 lex :: (filename:string) -> [] TOKEN {
 
     tokens: [..] TOKEN;
 
     file,success := read_entire_file(filename);
     if !success {
-        print("Could not find file %  E001 \n",filename);
+        print("Could not find file % E001 \n",filename);
         exit(1);
     }
     file = to_lower_copy_new(file);
-    r:int = 1;
-    c:int = 1;
+
     for 0..file.count - 1 {
         c += 1;
             if file[it]== {
             case #char "f";
             if lexer_peek(1) == #char "n" {
                 if is_alnum(lexer_peek(2)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens, .{"",.fn});
+                array_add(*tokens, .{"",.k_fn});
                 array_add(*tokens,.{add_identifier(it+3,true),.identifier});
+                message = .SCOPED_FN;
             }
             else if lexer_peek(1) == #char "l" && lexer_peek(2) == #char "o" && lexer_peek(3) == #char "a" && lexer_peek(4) == #char "t" { 
                 if is_alnum(lexer_peek(5)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens,.{"",.type_float}); 
+                array_add(*tokens,.{"",.t_float}); 
                 it +=4; 
             }
             else if lexer_peek(1) == #char "a" && lexer_peek(2) == #char "l" && lexer_peek(3) == #char "s" && lexer_peek(4) == #char "e" { 
                 if is_alnum(lexer_peek(5)) then unknown_token_error(r,c,it,file);
                 array_add(*tokens,.{"",.k_false}); 
-                it +=4; 
+                it += 4; 
             }
             else {
                 ident,skip := check_identifier(it);
@@ -52,12 +70,12 @@ lex :: (filename:string) -> [] TOKEN {
             case #char "i";
             if lexer_peek(1) == #char "n" && lexer_peek(2) == #char "t" { 
                 if is_alnum(lexer_peek(3)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens,.{"",.type_int}); 
+                array_add(*tokens,.{"",.t_int}); 
                 it += 2;
             }
             else if lexer_peek(1) == #char "f" {
                 if is_alnum(lexer_peek(2)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens,.{"",.s_if}); 
+                array_add(*tokens,.{"",.k_if}); 
                 i:int = it + 2;
                 builder:String_Builder;
                 while i <= file.count - 1 && file[i] != #char "{" {
@@ -66,6 +84,7 @@ lex :: (filename:string) -> [] TOKEN {
                 }
                 array_add(*tokens,.{builder_to_string(*builder),.expression});
                 it = i - 1;
+                message = .SCOPED_IF;
             }
             else {
                 ident,skip := check_identifier(it);
@@ -86,7 +105,7 @@ lex :: (filename:string) -> [] TOKEN {
             case #char "c";
             if lexer_peek(1) == #char "h" && lexer_peek(2) == #char "a" && lexer_peek(3) == #char "r" {
                 if is_alnum(lexer_peek(4)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens,.{"",.type_char}); 
+                array_add(*tokens,.{"",.t_char}); 
                 it += 3;
             }
             else {
@@ -111,7 +130,7 @@ lex :: (filename:string) -> [] TOKEN {
             case #char "b";
             if lexer_peek(1) == #char "o" && lexer_peek(2) == #char "o" && lexer_peek(3) == #char "l" { 
                 if is_alnum(lexer_peek(4)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens,.{"",.type_bool}); 
+                array_add(*tokens,.{"",.t_bool}); 
                 it +=3; 
             }
             else {
@@ -134,7 +153,7 @@ lex :: (filename:string) -> [] TOKEN {
             if lexer_peek(1) == #char "t" && lexer_peek(2) == #char "r" {
                 if lexer_peek(3) != #char "u" then {
                     if is_alnum(lexer_peek(3)) then unknown_token_error(r,c,it,file);
-                    array_add(*tokens,.{"",.type_string}); 
+                    array_add(*tokens,.{"",.t_string}); 
                     it += 2;
                 }
                 else if lexer_peek(4) == #char "c" && lexer_peek(5) == #char "t" {
@@ -147,15 +166,7 @@ lex :: (filename:string) -> [] TOKEN {
                     }
                     ident := add_type(it+i,true);
                     array_add(*tokens,.{ident,.type});
-                    // uhh me when the uhhh
-                    j:int = it;
-                    while file[j] != #char "{" {
-                        j += 1;
-                    }
-                    if file[j] == #char "{" {
-                        array_add(*tokens,.{"",.lbrack});
-                        find_struct();
-                    }
+                    message = .SCOPED_STRUCT;
                 }
             }
             else {
@@ -201,8 +212,9 @@ lex :: (filename:string) -> [] TOKEN {
             }
             else if lexer_peek(1) == #char "l" && lexer_peek(2) == #char "s" && lexer_peek(3) == #char "e" {
                     if is_alnum(lexer_peek(4)) then unknown_token_error(r,c,it,file);
-                    array_add(*tokens, .{"",.s_else});
+                    array_add(*tokens, .{"",.k_else});
                     it += 4;
+                    message = .SCOPED_ELSE;
             }
             else {
                 ident,skip := check_identifier(it);
@@ -223,7 +235,7 @@ lex :: (filename:string) -> [] TOKEN {
             case #char "l";
             if lexer_peek(1) == #char "e" && lexer_peek(2) == #char "t" {
                 if is_alnum(lexer_peek(3)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens,.{"",.let});
+                array_add(*tokens,.{"",.k_let});
                 array_add(*tokens,.{add_identifier(it+4,true),.identifier});
             }
             else {
@@ -246,7 +258,7 @@ lex :: (filename:string) -> [] TOKEN {
             case #char "r";
             if lexer_peek(1) == #char "e" && lexer_peek(2) == #char "t" {
                 if is_alnum(lexer_peek(3)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens,.{"",.ret});
+                array_add(*tokens,.{"",.k_ret});
                 array_add(*tokens,.{add_expression(it+4),.expression});
             }
             else {
@@ -450,6 +462,7 @@ lex :: (filename:string) -> [] TOKEN {
             array_add(*tokens,.{"",.lbrack});
             case #char "}";
             array_add(*tokens,.{"",.rbrack});
+            message = .GLOBAL;
             case #char "\r";
             r += 1;
             c = 0;
@@ -487,46 +500,47 @@ lex :: (filename:string) -> [] TOKEN {
 TOKEN :: struct {
     lexeme:string;
     tokentype: enum u8 {
-        identifier :: 255;
-        ret        :: 254;
-        let        :: 253;
-        sh_ret     :: 240;
-    int_literal    :: 252;
-        fn         :: 249;
-        type       :: 232;
-        expression :: 242;
-        k_struct   :: 235;
-        k_enum     :: 231;
+        identifier    :: 255;
+        k_ret         :: 254;
+        k_let         :: 253;
+        sh_ret        :: 240; // ->
+        int_literal   :: 252;
+        k_fn          :: 249;
+        type          :: 232;
+        expression    :: 242;
+        k_struct      :: 235;
+        m_struct      :: 221;
+        k_enum        :: 231;
     
-    string_literal :: 228;
-    float_literal  :: 225;
+       string_literal :: 228;
+       float_literal  :: 225;
         
-        k_true     :: 230;
-        k_false    :: 229;
+        k_true        :: 230;
+        k_false       :: 229;
 
-        eq         :: 251;
-        col        :: 250;
-        lparen     :: 247;
-        rparen     :: 246;
-        lbrack     :: 245;
-        rbrack     :: 244;
-        lbrace     :: 227;
-        rbrace     :: 226;
-        carat      :: 243;
+        // Im not adding a prefix for symbols
+        eq            :: 251;
+        col           :: 250;
+        lparen        :: 247;
+        rparen        :: 246;
+        lbrack        :: 245;
+        rbrack        :: 244;
+        lbrace        :: 227;
+        rbrace        :: 226;
+        carat         :: 243;
         //asterix  :: 239;
 
-        r_type     :: 234;
+        r_type        :: 234; // -<
 
-        s_if       :: 224;
-        s_else     :: 223;
+        k_if          :: 224;
+        k_else        :: 223;
 
-        type_int   :: 239;
-        type_char  :: 238;
-        type_bool  :: 237;
-        type_float :: 236;
-       type_string :: 233;
-
-       user        :: 222;
+        t_int         :: 239;
+        t_char        :: 238;
+        t_bool        :: 237;
+        t_float       :: 236;
+        t_string      :: 233;
+        // other custom tokens work, as this is a u8 Ik_FNEEDED: increase to a u16
     }
 }
 
@@ -542,12 +556,14 @@ find_enum :: () #expand {
     while `file[e] != #char "}" {
         e += 1;
     }
+    //filter out characters we dont want
+    // TODO: make this more efficient
     members := string_slice(`file,`i + 1,e - 1);
     members = replace(members,"\t","");
     members,skip = replace(members,"\n","");
     members = replace(members,"\r","");
     members = replace(members," ","");
-    //print("%\n",members);
+    // Split into individual members
     a_members := split(members,",");
     for member: a_members {
         if member != "" {
@@ -559,28 +575,8 @@ find_enum :: () #expand {
     `it = e - 1;
 }
 
-find_struct :: () #expand {
-    skip:int = 1;
-    e:int = `i;
-    while `file[e] != #char "}" {
-        e += 1;
-    }
-    members := string_slice(`file,`i + 1,e - 1);
-    members = replace(members,"\t","");
-    members,skip = replace(members,"\n","");
-    members = replace(members,"\r","");
-    members = replace(members," ","");
-    //print("%\n",members);
-    a_members := split(members,";");
-    for member: a_members {
-        if member != "" {
-        array_add(*`identifiers,sprint("%.%",`ident,member));
-        array_add(*`tokens,.{member,.identifier});
-        }
-    }
-    `r += skip;
-    `it = e - 1;
-}
+
+
 
 string_slice :: (T:string,from:int,to:int) -> string {
     builder:String_Builder;
@@ -593,36 +589,91 @@ string_slice :: (T:string,from:int,to:int) -> string {
     return builder_to_string(*builder);
 }
 
-unknown_token_error :: (r:int,c:int,i:int,file:string) {
-    //print("%\n%\n",ltypes,identifiers);
-    builder:String_Builder;
+string_reverse :: (str:string) -> string {
+    rev:string = str;
+    i:int = 0;
+    j:int = str.count-1;
+    while i <= j {
+        c:u8 = rev[i];
+        rev[i] = rev[j];
+        rev[j] = c;
+        i += 1;
+        j -= 1;
+    }
+    return rev;
+}
+
+unknown_token_error :: (r:int,c:int,i:int,file:string) #expand {
+    if message == .SCOPED_STRUCT {
+        i2:int = i;
+        while file[i2] != #char ":" && i2 <= file.count-1 {
+            i2 += 1;
+        }
+        if file[i2] == #char ":" {
+            it := i;
+            ident := add_identifier(i,false);
+            array_add(*`tokens,.{ident,.m_struct});
+            `it += ident.count - 1;
+            return;
+        }
+    }
+    print("%\n",message);
+    // Backtrack
+    counterLine:int = i;
+    lineB:String_Builder;
+    test:String_Builder;
+    while counterLine <= file.count - 1 && !is_nl(file[counterLine]) {
+        counterLine += 1;
+    }
+    counterLine -= 1;
+    while counterLine >= 0 {
+        if file[counterLine] == #char "\n" {
+            break;
+        }
+        if file[counterLine] == #char "\r" {
+            break;
+        }
+        append(*lineB,file[counterLine]);
+        counterLine -= 1;
+    }
+    
+    line := builder_to_string(*lineB);
+    line = string_reverse(line);
+
     tokapp:String_Builder;
-    i2 := i;
-    i3 := i;
-    while i2 <= file.count - 1 && !is_nl(file[i2]) {
-        append(*builder,file[i2]);
-        i2 += 1;
+    tokCounter := i;
+    while tokCounter <= file.count - 1 && is_alnum(file[tokCounter]) && !is_whitespace(file[tokCounter]) {
+        append(*tokapp,file[tokCounter]);
+        tokCounter += 1;
     }
-    while i3 <= file.count - 1 && is_alnum(file[i3]) {
-        append(*tokapp,file[i3]);
-        i3 += 1;
-    }
-    line := builder_to_string(*builder);
     tok := builder_to_string(*tokapp);
+
     print("\x1B[1m\x1B[31mError\x1B[0m: Unknown token \"%\" found at line:% column:%\n",tok,r,c);
     print("┃\n┃\n└▶ %\n",line);
-    spaces:String_Builder;
-    carats:String_Builder;
-    for 0..tok.count -1  {
-        append(*carats,"^");
-    }
-    carats_s := builder_to_string(*carats);
-    for c..c + tok.count - carats_s.count  {
-        append(*spaces," ");
-    }
 
-    print("  %1%",builder_to_string(*spaces),carats_s);
+    len := line.count + 1;
+    pointerBuilder:String_Builder;
+    for 0..len {
+        append(*pointerBuilder," ");
+    }
+    pointer:string = builder_to_string(*pointerBuilder);
+    caratCounter:int = tok.count;
+    while caratCounter != 0 {
+        pointer[caratCounter] = #char "^";
+        caratCounter -= 1;
+    }
+    print("%\n",string_reverse(pointer));
+
     exit(0);
+
+}
+
+remove_whitespace :: (str:string) -> string {
+    builder:String_Builder;
+    for 0..str.count - 1 {
+        if is_whitespace(str[it]) then it += 1; else append(*builder,str[it]);
+    }
+    return builder_to_string(*builder);
 }
 
 is_whitespace :: (char:u8) -> bool {
@@ -695,8 +746,9 @@ lex_arguments :: () -> [] TOKEN #expand {
         if `file[i] =={
             case #char ":";
             array_add(*argument_tokens,.{"",.col});
+
             case #char "i";
-            if `file[i+1] == #char "n" && `file[i+2] == #char "t" { array_add(*argument_tokens,.{"",.type_int}); i += 2;}
+            if `file[i+1] == #char "n" && `file[i+2] == #char "t" { array_add(*argument_tokens,.{"",.t_int}); i += 2;}
             else {
                 builder:String_Builder;
 
@@ -708,8 +760,9 @@ lex_arguments :: () -> [] TOKEN #expand {
                 array_add(*argument_tokens,.{sprint("%",builder_to_string(*builder)),.identifier});
                 i = i2 - 1;
             }
+
             case #char "c";
-            if `file[i+1] == #char "h" && `file[i+2] == #char "a" && `file[i+3] == #char "r" { array_add(*argument_tokens,.{"",.type_char}); i += 3;}
+            if `file[i+1] == #char "h" && `file[i+2] == #char "a" && `file[i+3] == #char "r" { array_add(*argument_tokens,.{"",.t_char}); i += 3;}
             else {
             builder:String_Builder;
 
@@ -722,7 +775,7 @@ lex_arguments :: () -> [] TOKEN #expand {
                 i = i2 - 1;
             }
             case #char "f";
-            if `file[i+1] == #char "l" && `file[i+2] == #char "o" && `file[i+3] == #char "a" && `file[i+4] == #char "t" { array_add(*argument_tokens,.{"",.type_float}); i +=4; }
+            if `file[i+1] == #char "l" && `file[i+2] == #char "o" && `file[i+3] == #char "a" && `file[i+4] == #char "t" { array_add(*argument_tokens,.{"",.t_float}); i +=4; }
             else {
             builder:String_Builder;
 
@@ -735,7 +788,7 @@ lex_arguments :: () -> [] TOKEN #expand {
                 i = i2 - 1;
             }
             case #char "b";
-            if `file[i+1] == #char "o" && `file[i+2] == #char "o" && `file[i+3] == #char "l" { array_add(*argument_tokens,.{"",.type_bool}); i+=3; }
+            if `file[i+1] == #char "o" && `file[i+2] == #char "o" && `file[i+3] == #char "l" { array_add(*argument_tokens,.{"",.t_bool}); i+=3; }
             else {
             builder:String_Builder;
 
