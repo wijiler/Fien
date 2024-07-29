@@ -462,7 +462,6 @@ lex :: (filename:string) -> [] TOKEN {
             array_add(*tokens,.{"",.lbrack});
             case #char "}";
             array_add(*tokens,.{"",.rbrack});
-            message = .GLOBAL;
             case #char "\r";
             r += 1;
             c = 0;
@@ -473,7 +472,6 @@ lex :: (filename:string) -> [] TOKEN {
             case #char " ";;
             case #char "\t";
             c+= 4;
-
             case #char "^";
             array_add(*tokens,.{"",.carat});
 
@@ -607,8 +605,10 @@ unknown_token_error :: (r:int,c:int,i:int,file:string) #expand {
     if message == .SCOPED_STRUCT {
         i2:int = i;
         while file[i2] != #char ":" && i2 <= file.count-1 {
+            if file[i2] == #char "}" then break;
             i2 += 1;
         }
+
         if file[i2] == #char ":" {
             it := i;
             ident := add_identifier(i,false);
@@ -617,7 +617,6 @@ unknown_token_error :: (r:int,c:int,i:int,file:string) #expand {
             return;
         }
     }
-    print("%\n",message);
     // Backtrack
     counterLine:int = i;
     lineB:String_Builder;
