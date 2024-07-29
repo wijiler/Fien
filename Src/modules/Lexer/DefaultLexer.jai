@@ -1,7 +1,7 @@
 r:int = 1;
 c:int = 1;
 
-message:MESSAGE = .DEFAULT;
+message:[..] MESSAGE;
 
 MESSAGE :: enum u8 {
     DEFAULT       :: 0;
@@ -35,7 +35,7 @@ lex :: (filename:string) -> [] TOKEN {
                 if is_alnum(lexer_peek(2)) then unknown_token_error(r,c,it,file);
                 array_add(*tokens, .{"",.k_fn});
                 array_add(*tokens,.{add_identifier(it+3,true),.identifier});
-                message = .SCOPED_FN;
+                array_add(*message,.SCOPED_FN);
             }
             else if lexer_peek(1) == #char "l" && lexer_peek(2) == #char "o" && lexer_peek(3) == #char "a" && lexer_peek(4) == #char "t" { 
                 if is_alnum(lexer_peek(5)) then unknown_token_error(r,c,it,file);
@@ -84,7 +84,7 @@ lex :: (filename:string) -> [] TOKEN {
                 }
                 array_add(*tokens,.{builder_to_string(*builder),.expression});
                 it = i - 1;
-                message = .SCOPED_IF;
+                array_add(*message,.SCOPED_IF);
             }
             else {
                 ident,skip := check_identifier(it);
@@ -166,7 +166,7 @@ lex :: (filename:string) -> [] TOKEN {
                     }
                     ident := add_type(it+i,true);
                     array_add(*tokens,.{ident,.type});
-                    message = .SCOPED_STRUCT;
+                    array_add(*message,.SCOPED_STRUCT);
                 }
             }
             else {
@@ -209,12 +209,13 @@ lex :: (filename:string) -> [] TOKEN {
                         array_add(*tokens,.{"",.lbrack});
                         find_enum();
                     }
+                    array_add(*message,.SCOPED_ENUM);
             }
             else if lexer_peek(1) == #char "l" && lexer_peek(2) == #char "s" && lexer_peek(3) == #char "e" {
                     if is_alnum(lexer_peek(4)) then unknown_token_error(r,c,it,file);
                     array_add(*tokens, .{"",.k_else});
                     it += 4;
-                    message = .SCOPED_ELSE;
+                    array_add(*message,.SCOPED_STRUCT);
             }
             else {
                 ident,skip := check_identifier(it);
@@ -289,7 +290,9 @@ lex :: (filename:string) -> [] TOKEN {
 
                 array_add(*tokens,.{"",.sh_ret});
                 array_add(*tokens,.{add_expression(it+2),.expression});
-
+                if message.count != 0 && message[message.count - 1] == .SCOPED_FN {
+                    pop(*message);
+                }
             }
 
 
@@ -462,6 +465,7 @@ lex :: (filename:string) -> [] TOKEN {
             array_add(*tokens,.{"",.lbrack});
             case #char "}";
             array_add(*tokens,.{"",.rbrack});
+            pop(*message);
             case #char "\r";
             r += 1;
             c = 0;
@@ -491,6 +495,7 @@ lex :: (filename:string) -> [] TOKEN {
             }
         }
     }
+    print("%\n",message);
     return tokens;
 }
 
@@ -602,19 +607,21 @@ string_reverse :: (str:string) -> string {
 }
 
 unknown_token_error :: (r:int,c:int,i:int,file:string) #expand {
-    if message == .SCOPED_STRUCT {
-        i2:int = i;
-        while file[i2] != #char ":" && i2 <= file.count-1 {
-            if file[i2] == #char "}" then break;
-            i2 += 1;
-        }
+    if message.count > 0 {
+        if message[message.count-1] == .SCOPED_STRUCT {
+            i2:int = i;
+            while file[i2] != #char ":" && i2 <= file.count-1 {
+                if file[i2] == #char "}" then break;
+                i2 += 1;
+            }
 
-        if file[i2] == #char ":" {
-            it := i;
-            ident := add_identifier(i,false);
-            array_add(*`tokens,.{ident,.m_struct});
-            `it += ident.count - 1;
-            return;
+            if file[i2] == #char ":" {
+                it := i;
+                ident := add_identifier(i,false);
+                array_add(*`tokens,.{ident,.m_struct});
+                `it += ident.count - 1;
+                return;
+            }
         }
     }
     // Backtrack
