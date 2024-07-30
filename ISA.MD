@@ -1,21 +1,40 @@
-# LIRA ISA
+# LIRA
 
-atok %STRING% - Creates a new token  
+`atok %name%` -> creates a new tokentype  
+`attok %name%` -> creates a new tokentype specified as a type  
+`expr %format%` -> sets expression format  
+`lex` -> lexes based on previously set rules
+`tok %lexeme% %tokentype`  -> returns a token into the token array  
+`peek %ahead% %char%` -> peeks ahead x amount and checks for char  
+`grammarFunc: %function%` -> allows you to define the grammar of a token
 
-lident - Lexes the current word as an ident and pushes it into the token register  
+## Symbols
 
-lex %TOK% %STRING% %LEN% - Lexes the current word as a token and pushes it into the token register  
+```nothing
+> - after this do
+:: - rule for this token
+!! - stop the rule when hitting this character
+?> - if not true do this
+```
 
-pop - pops from the token register into the token array  
+## Formats
 
-GRAMMARFUNC: %BLOCK% - Define the 
+```nothing
+%Ident% - add this as a valid Identifier
+%ident% - add this as a valid Identifier in this scope
+%Type%  - add this a valid type
+%type%  - add this a valid type in this scope
+```
 
-ERROR: %BLOCK%  
+## Example of use in fien
 
-## %BLOCK% TYPE
+```fien
+#lexer,add {
+    atok foo
+    atok lparen
+    grammarFunc:
+     "foo" :: tok "" foo
+     "(" :: tok "" lparen > expr "%Ident%:%Type%" > lex !! ")"
+}
 
-Can be any valid Fien, although comes with a fien lexing library (FLL)  
-Functions include  
-
-- peek %AMOUNT% - peeks a certain amount ahead  
-- ident 
+```
