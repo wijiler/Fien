@@ -2,6 +2,8 @@ r:int = 1;
 c:int = 1;
 
 message:[..] MESSAGE;
+#run array_add(*message,.GLOBAL);
+potential_scope: MESSAGE;
 
 MESSAGE :: enum u8 {
     DEFAULT       :: 0;
@@ -17,15 +19,8 @@ MESSAGE :: enum u8 {
 }
 
 change_scope :: (scope:MESSAGE) {
-    if message.count != 0 {
-        if message[message.count - 1] == .GLOBAL then pop(*message);
-        array_add(*message,scope);
-        return;
-    }
-    else {
-        array_add(*message,scope);
-    }
-    return;
+    potential_scope = scope;
+    if message.count != 0 && message[message.count - 1] == .GLOBAL then pop(*message);
 }
 
 lex :: (filename:string) -> [] TOKEN {
@@ -46,7 +41,8 @@ lex :: (filename:string) -> [] TOKEN {
             if lexer_peek(1) == #char "n" {
                 if is_alnum(lexer_peek(2)) then unknown_token_error(r,c,it,file);
                 array_add(*tokens, .{"",.k_fn});
-                array_add(*tokens,.{add_identifier(it+3,true),.identifier});
+                array_add(*tokens,.{add_function(it+3,true),.identifier});
+
                 change_scope(.SCOPED_FN);
             }
             else if lexer_peek(1) == #char "l" && lexer_peek(2) == #char "o" && lexer_peek(3) == #char "a" && lexer_peek(4) == #char "t" { 
@@ -367,12 +363,13 @@ lex :: (filename:string) -> [] TOKEN {
             array_add(*tokens,.{"",.rparen});
             case #char "{";
             array_add(*tokens,.{"",.lbrack});
+            array_add(*message,potential_scope);
             case #char "}";
             array_add(*tokens,.{"",.rbrack});
             if message.count == 0 {
                 change_scope(.GLOBAL);
             }
-            pop(*message);
+            if message.count != 0 then pop(*message);
             array_reset(*identifiers);
 
             case #char "\r";
@@ -408,6 +405,14 @@ check :: () #expand {
         array_add(*`tokens,.{ident,.identifier});
         `it = skip;
     }
+    else if array_find(global_functions,ident) {
+        array_add(*`tokens,.{ident,.identifier});
+        `it = skip;
+    }
+        else if array_find(functions,ident) {
+        array_add(*`tokens,.{ident,.identifier});
+        `it = skip;
+    }
     else if array_find(ltypes,ident) {
         array_add(*`tokens,.{ident,.type});
         `it = skip;
@@ -427,43 +432,43 @@ TOKEN :: struct {
         identifier    :: 255;
         k_ret         :: 254;
         k_let         :: 253;
-        sh_ret        :: 240; // ->
-        int_literal   :: 252;
-        k_fn          :: 249;
-        type          :: 232;
-        expression    :: 242;
-        k_struct      :: 235;
-        m_struct      :: 221;
-        k_enum        :: 231;
+        sh_ret        :: 252; // ->
+        int_literal   :: 251;
+        k_fn          :: 250;
+        c_fn          :: 249;
+        type          :: 247;
+        expression    :: 246;
+        k_struct      :: 245;
+        m_struct      :: 244;
+        k_enum        :: 243;
     
-       string_literal :: 228;
-       float_literal  :: 225;
+       string_literal :: 242;
+       float_literal  :: 240;
         
-        k_true        :: 230;
-        k_false       :: 229;
+        k_true        :: 239;
+        k_false       :: 238;
 
-        // Im not adding a prefix for symbols
-        eq            :: 251;
-        col           :: 250;
-        lparen        :: 247;
-        rparen        :: 246;
-        lbrack        :: 245;
-        rbrack        :: 244;
-        lbrace        :: 227;
-        rbrace        :: 226;
-        carat         :: 243;
-        //asterix  :: 239;
 
-        r_type        :: 234; // -<
+        eq            :: 237;
+        col           :: 236;
+        lparen        :: 235;
+        rparen        :: 234;
+        lbrack        :: 233;
+        rbrack        :: 232;
+        lbrace        :: 231;
+        rbrace        :: 230;
+        carat         :: 229;
 
-        k_if          :: 224;
-        k_else        :: 223;
+        r_type        :: 228; // -<
 
-        t_int         :: 239;
-        t_char        :: 238;
-        t_bool        :: 237;
-        t_float       :: 236;
-        t_string      :: 233;
+        k_if          :: 227;
+        k_else        :: 226;
+
+        t_int         :: 225;
+        t_char        :: 224;
+        t_bool        :: 223;
+        t_float       :: 221;
+        t_string      :: 220;
         // other custom tokens work, as this is a u8 Ik_FNEEDED: increase to a u16
     }
 }
@@ -473,7 +478,26 @@ TOKEN :: struct {
 // ! Lexing library
 identifiers: [..] string;
 global_idents: [..] string;
+global_functions: [..] string;
+functions: [..] string;
 ltypes: [..] string;
+
+
+add_function :: (start:int,new:bool) -> string #expand {
+    builder:String_Builder;
+    i:int = start;
+    while  i <= `file.count - 1 && is_alnum(`file[i])  {
+        append(*builder,`file[i]);
+        i += 1;
+    }
+    ident:string = builder_to_string(*builder);
+    if message.count > 0 && new && message[message.count - 1] == .GLOBAL then array_add(*global_functions,ident);
+    if new then array_add(*functions,ident);
+    `it = i;
+    return ident;
+}
+
+
 
 find_enum :: () #expand {
     skip:int = 1;
@@ -528,24 +552,32 @@ string_reverse :: (str:string) -> string {
     return rev;
 }
 
+scope_is_nested :: () -> bool {
+    if message.count >= 2 then return true; else return false;
+}
+
+operator== :: (a:TOKEN,b:TOKEN) -> bool {
+    if a.lexeme == b.lexeme && a.tokentype == b.tokentype then return true; else return false;
+}
+
 unknown_token_error :: (r:int,c:int,i:int,file:string) #expand {
-    if message.count > 0 {
-        if message[message.count-1] == .SCOPED_STRUCT {
+        // ! KNOWN ERRORS & FIXES LIST
+        // TODO: In parser during error checking make sure m_struct never comes before "{" in a nested struct
+        if message.count > 0 && message[message.count-1] == .SCOPED_STRUCT {
             i2:int = i;
             while file[i2] != #char ":" && i2 <= file.count-1 {
                 if file[i2] == #char "}" then break;
                 i2 += 1;
             }
-
+            
             if file[i2] == #char ":" {
-                it := i;
-                ident := add_identifier(i,false);
-                array_add(*`tokens,.{ident,.m_struct});
-                `it += ident.count - 1;
-                return;
+                    it := i;
+                    ident := add_identifier(i,false);
+                    array_add(*`tokens,.{ident,.m_struct});
+                    `it += ident.count - 1;
+                    return;
             }
         }
-    }
     // Backtrack
     counterLine:int = i;
     lineB:String_Builder;
@@ -579,21 +611,20 @@ unknown_token_error :: (r:int,c:int,i:int,file:string) #expand {
     print("\x1B[1m\x1B[31mError\x1B[0m: Unknown token \"%\" found at line:% column:%\n",tok,r,c);
     print("┃\n┃\n└▶ %\n",line);
 
-    len := line.count + 1;
+    len := line.count;
     pointerBuilder:String_Builder;
     for 0..len {
         append(*pointerBuilder," ");
     }
     pointer:string = builder_to_string(*pointerBuilder);
     caratCounter:int = tok.count;
-    while caratCounter != 0 {
+    while caratCounter > 0 {
         pointer[caratCounter] = #char "^";
         caratCounter -= 1;
     }
     print("%\n",string_reverse(pointer));
 
     exit(0);
-
 }
 
 remove_whitespace :: (str:string) -> string {

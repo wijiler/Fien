@@ -7,16 +7,18 @@ enum wah {
 struct foo {
     bar:int
 
-    struct cock {
+    struct cock  {
         balls:int
     }
 }
 
-fn add ( a: int b: int ) -< int -> a + b 
+fn add ( a:int b:int ) -< int -> a + b 
 
 fn main () -< int {
     let three: int = add 1 2
     let four: int = add three 1 
-    let add: int = 1 + 2
+    
+    add
+
     ret 0
 }
