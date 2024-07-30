@@ -16,6 +16,18 @@ MESSAGE :: enum u8 {
     GLOBAL        :: 255;
 }
 
+change_scope :: (scope:MESSAGE) {
+    if message.count != 0 {
+        if message[message.count - 1] == .GLOBAL then pop(*message);
+        array_add(*message,scope);
+        return;
+    }
+    else {
+        array_add(*message,scope);
+    }
+    return;
+}
+
 lex :: (filename:string) -> [] TOKEN {
 
     tokens: [..] TOKEN;
@@ -35,7 +47,7 @@ lex :: (filename:string) -> [] TOKEN {
                 if is_alnum(lexer_peek(2)) then unknown_token_error(r,c,it,file);
                 array_add(*tokens, .{"",.k_fn});
                 array_add(*tokens,.{add_identifier(it+3,true),.identifier});
-                array_add(*message,.SCOPED_FN);
+                change_scope(.SCOPED_FN);
             }
             else if lexer_peek(1) == #char "l" && lexer_peek(2) == #char "o" && lexer_peek(3) == #char "a" && lexer_peek(4) == #char "t" { 
                 if is_alnum(lexer_peek(5)) then unknown_token_error(r,c,it,file);
@@ -48,19 +60,7 @@ lex :: (filename:string) -> [] TOKEN {
                 it += 4; 
             }
             else {
-                ident,skip := check_identifier(it);
-                
-                if array_find(identifiers,ident) {
-                    array_add(*tokens,.{ident,.identifier});
-                    it = skip;
-                }
-                else if array_find(ltypes,ident) {
-                    array_add(*tokens,.{ident,.type});
-                    it = skip;
-                }
-                else {
-                unknown_token_error(r,c,it,file);
-                }
+                check();
             }
 
             case #char "(";
@@ -84,22 +84,10 @@ lex :: (filename:string) -> [] TOKEN {
                 }
                 array_add(*tokens,.{builder_to_string(*builder),.expression});
                 it = i - 1;
-                array_add(*message,.SCOPED_IF);
+                change_scope(.SCOPED_IF);
             }
             else {
-                ident,skip := check_identifier(it);
-                
-                if array_find(identifiers,ident) {
-                    array_add(*tokens,.{ident,.identifier});
-                    it = skip;
-                }
-                else if array_find(ltypes,ident) {
-                    array_add(*tokens,.{ident,.type});
-                    it = skip;
-                }
-                else {
-                unknown_token_error(r,c,it,file);
-                }
+                check();
             }
 
             case #char "c";
@@ -109,19 +97,7 @@ lex :: (filename:string) -> [] TOKEN {
                 it += 3;
             }
             else {
-                ident,skip := check_identifier(it);
-                
-                if array_find(identifiers,ident) {
-                    array_add(*tokens,.{ident,.identifier});
-                    it = skip;
-                }
-                else if array_find(ltypes,ident) {
-                    array_add(*tokens,.{ident,.type});
-                    it = skip;
-                }
-                else {
-                unknown_token_error(r,c,it,file);
-                }
+                check();
             }
 
             case #char ":"; 
@@ -134,19 +110,7 @@ lex :: (filename:string) -> [] TOKEN {
                 it +=3; 
             }
             else {
-                ident,skip := check_identifier(it);
-                
-                if array_find(identifiers,ident) {
-                    array_add(*tokens,.{ident,.identifier});
-                    it = skip;
-                }
-                else if array_find(ltypes,ident) {
-                    array_add(*tokens,.{ident,.type});
-                    it = skip;
-                }
-                else {
-                unknown_token_error(r,c,it,file);
-                }
+                check();
             }
 
             case #char "s";
@@ -166,23 +130,11 @@ lex :: (filename:string) -> [] TOKEN {
                     }
                     ident := add_type(it+i,true);
                     array_add(*tokens,.{ident,.type});
-                    array_add(*message,.SCOPED_STRUCT);
+                    change_scope(.SCOPED_STRUCT);
                 }
             }
             else {
-                ident,skip := check_identifier(it);
-                
-                if array_find(identifiers,ident) {
-                    array_add(*tokens,.{ident,.identifier});
-                    it = skip;
-                }
-                else if array_find(ltypes,ident) {
-                    array_add(*tokens,.{ident,.type});
-                    it = skip;
-                }
-                else {
-                unknown_token_error(r,c,it,file);
-                }
+                check();
             }
 
             case #char "e";
@@ -209,28 +161,16 @@ lex :: (filename:string) -> [] TOKEN {
                         array_add(*tokens,.{"",.lbrack});
                         find_enum();
                     }
-                    array_add(*message,.SCOPED_ENUM);
+                    change_scope(.SCOPED_ENUM);
             }
             else if lexer_peek(1) == #char "l" && lexer_peek(2) == #char "s" && lexer_peek(3) == #char "e" {
                     if is_alnum(lexer_peek(4)) then unknown_token_error(r,c,it,file);
                     array_add(*tokens, .{"",.k_else});
                     it += 4;
-                    array_add(*message,.SCOPED_STRUCT);
+                    change_scope(.SCOPED_STRUCT);
             }
             else {
-                ident,skip := check_identifier(it);
-                
-                if array_find(identifiers,ident) {
-                    array_add(*tokens,.{ident,.identifier});
-                    it = skip;
-                }
-                else if array_find(ltypes,ident) {
-                    array_add(*tokens,.{ident,.type});
-                    it = skip;
-                }
-                else {
-                unknown_token_error(r,c,it,file);
-                }
+                check();
             }
 
             case #char "l";
@@ -240,19 +180,7 @@ lex :: (filename:string) -> [] TOKEN {
                 array_add(*tokens,.{add_identifier(it+4,true),.identifier});
             }
             else {
-                ident,skip := check_identifier(it);
-                
-                if array_find(identifiers,ident) {
-                    array_add(*tokens,.{ident,.identifier});
-                    it = skip;
-                }
-                else if array_find(ltypes,ident) {
-                    array_add(*tokens,.{ident,.type});
-                    it = skip;
-                }
-                else {
-                unknown_token_error(r,c,it,file);
-                }
+                check();
             }
 
             
@@ -263,19 +191,7 @@ lex :: (filename:string) -> [] TOKEN {
                 array_add(*tokens,.{add_expression(it+4),.expression});
             }
             else {
-                ident,skip := check_identifier(it);
-                
-                if array_find(identifiers,ident) {
-                    array_add(*tokens,.{ident,.identifier});
-                    it = skip;
-                }
-                else if array_find(ltypes,ident) {
-                    array_add(*tokens,.{ident,.type});
-                    it = skip;
-                }
-                else {
-                unknown_token_error(r,c,it,file);
-                }
+                check();
             }
 
             case #char "=";
@@ -434,19 +350,7 @@ lex :: (filename:string) -> [] TOKEN {
                 it += 4;
             }
             else {
-                ident,skip := check_identifier(it);
-                
-                if array_find(identifiers,ident) {
-                    array_add(*tokens,.{ident,.identifier});
-                    it = skip;
-                }
-                else if array_find(ltypes,ident) {
-                    array_add(*tokens,.{ident,.type});
-                    it = skip;
-                }
-                else {
-                unknown_token_error(r,c,it,file);
-                }
+                check();
             }
 
             case #char "\"";
@@ -465,7 +369,12 @@ lex :: (filename:string) -> [] TOKEN {
             array_add(*tokens,.{"",.lbrack});
             case #char "}";
             array_add(*tokens,.{"",.rbrack});
+            if message.count == 0 {
+                change_scope(.GLOBAL);
+            }
             pop(*message);
+            array_reset(*identifiers);
+
             case #char "\r";
             r += 1;
             c = 0;
@@ -480,25 +389,37 @@ lex :: (filename:string) -> [] TOKEN {
             array_add(*tokens,.{"",.carat});
 
             case;
-            ident,skip := check_identifier(it);
-            
-            if array_find(identifiers,ident) {
-                array_add(*tokens,.{ident,.identifier});
-                it = skip;
-            }
-            else if array_find(ltypes,ident) {
-                array_add(*tokens,.{ident,.type});
-                it = skip;
-            }
-            else {
-            unknown_token_error(r,c,it,file);
-            }
+            check();
         }
     }
     print("%\n",message);
     return tokens;
 }
 
+
+check :: () #expand {
+    ident,skip := check_identifier(`it,`file);
+    
+    if array_find(identifiers,ident) {
+        array_add(*`tokens,.{ident,.identifier});
+        `it = skip;
+    }
+    else if array_find(global_idents,ident) {
+        array_add(*`tokens,.{ident,.identifier});
+        `it = skip;
+    }
+    else if array_find(ltypes,ident) {
+        array_add(*`tokens,.{ident,.type});
+        `it = skip;
+    }
+    else {
+    it := `it;
+    tokens := `tokens;
+    unknown_token_error(r,c,it,`file);
+    `it = it;
+    `tokens = tokens;
+    }
+}
 
 TOKEN :: struct {
     lexeme:string;
@@ -551,6 +472,7 @@ TOKEN :: struct {
 
 // ! Lexing library
 identifiers: [..] string;
+global_idents: [..] string;
 ltypes: [..] string;
 
 find_enum :: () #expand {
@@ -714,6 +636,7 @@ add_identifier :: (start:int,new:bool) -> string #expand {
         i += 1;
     }
     ident:string = builder_to_string(*builder);
+    if message.count > 0 && new && message[message.count - 1] == .GLOBAL then array_add(*global_idents,ident);
     if new then array_add(*identifiers,ident);
     `it = i;
     return ident;
@@ -724,6 +647,19 @@ check_identifier :: (start:int) -> string,int #expand {
     i:int = start;
     while  i <= `file.count - 1 && is_alnum(`file[i])  {
         append(*builder,`file[i]);
+        i += 1;
+    }
+
+    ident:string = builder_to_string(*builder);
+    //`it = i + 1;
+    return ident,i;
+}
+
+check_identifier :: (start:int,file:string) -> string,int {
+    builder:String_Builder;
+    i:int = start;
+    while  i <= file.count - 1 && is_alnum(file[i])  {
+        append(*builder,file[i]);
         i += 1;
     }
 
