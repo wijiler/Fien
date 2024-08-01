@@ -58,7 +58,7 @@
      "(" :: tok "" lparen > expr "%ident%:%t%" > lex !! ")"
      "struct" :: tok "" struct > scope == global ? expr "%Type%" ! expr "%type%" > lex !! "{" > scope STRUCT > tok "" lbrack
 
-     default :: scope == struct ? fitexpr "%ident%:%t%",m_struct ? lex !! "\n" ! ! 
+     default :: scope == STRUCT ? fitexpr "%ident%:%t%",m_struct ? lex !! "\n" ! ! 
      isident ? expr "%ident%" > lex 1 ! istype ? expr "%t%" > lex 1  ! error
 
 }
