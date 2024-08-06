@@ -18,7 +18,14 @@ fn main () -< int {
     let three: int = add 1 2
     let four: int = add three 1 
     
-    add
+    match three {
+        test {
+        }
+
+        default {
+            
+        }
+    }
 
     ret 0
 }

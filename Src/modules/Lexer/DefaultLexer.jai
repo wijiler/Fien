@@ -6,16 +6,18 @@ message:[..] MESSAGE;
 potential_scope: MESSAGE;
 
 MESSAGE :: enum u8 {
-    DEFAULT       :: 0;
-    SCOPED_STRUCT :: 1;
-    SCOPED_FN     :: 2;
-    SCOPED_ENUM   :: 3;
-    SCOPED_IF     :: 4;
-    SCOPED_ELSE   :: 5;
+    DEFAULT           :: 0;
+    SCOPED_STRUCT     :: 1;
+    SCOPED_FN         :: 2;
+    SCOPED_ENUM       :: 3;
+    SCOPED_IF         :: 4;
+    SCOPED_ELSE       :: 5;
+    SCOPED_MATCH      :: 6;
+    SCOPED_MATCH_CASE :: 7;
 
 
 
-    GLOBAL        :: 255;
+    GLOBAL            :: 255;
 }
 
 change_scope :: (scope:MESSAGE) {
@@ -189,6 +191,17 @@ lex :: (filename:string) -> [] TOKEN {
             else {
                 check();
             }
+
+            case #char "m";
+            if lexer_peek(1) == #char "a" && lexer_peek(2) == #char "t" && lexer_peek(3) == #char "c" && lexer_peek(4) == #char "h" {
+                array_add(*tokens,.{"",.k_match});
+                it += 4;
+                change_scope(.SCOPED_MATCH);
+            }
+            else {
+                check();
+            }
+
 
             case #char "=";
             array_add(*tokens,.{"",.eq});
@@ -441,35 +454,38 @@ TOKEN :: struct {
         k_struct      :: 245;
         m_struct      :: 244;
         k_enum        :: 243;
+        k_match       :: 242;
+        c_match       :: 240;
+        k_default     :: 239;
     
-       string_literal :: 242;
-       float_literal  :: 240;
+       string_literal :: 238;
+       float_literal  :: 237;
         
-        k_true        :: 239;
-        k_false       :: 238;
+        k_true        :: 236;
+        k_false       :: 235;
 
 
-        eq            :: 237;
-        col           :: 236;
-        lparen        :: 235;
-        rparen        :: 234;
-        lbrack        :: 233;
-        rbrack        :: 232;
-        lbrace        :: 231;
-        rbrace        :: 230;
-        carat         :: 229;
+        eq            :: 234;
+        col           :: 233;
+        lparen        :: 232;
+        rparen        :: 231;
+        lbrack        :: 230;
+        rbrack        :: 229;
+        lbrace        :: 228;
+        rbrace        :: 227;
+        carat         :: 226;
 
-        r_type        :: 228; // -<
+        r_type        :: 225; // -<
 
-        k_if          :: 227;
-        k_else        :: 226;
+        k_if          :: 224;
+        k_else        :: 223;
 
-        t_int         :: 225;
-        t_char        :: 224;
-        t_bool        :: 223;
-        t_float       :: 221;
-        t_string      :: 220;
-        // other custom tokens work, as this is a u8 Ik_FNEEDED: increase to a u16
+        t_int         :: 222;
+        t_char        :: 221;
+        t_bool        :: 220;
+        t_float       :: 219;
+        t_string      :: 218;
+        // other custom tokens work, as this is a u8 IF_NEEDED: increase to a u16
     }
 }
 
@@ -561,8 +577,7 @@ operator== :: (a:TOKEN,b:TOKEN) -> bool {
 }
 
 unknown_token_error :: (r:int,c:int,i:int,file:string) #expand {
-        // ! KNOWN ERRORS & FIXES LIST
-        // TODO: In parser during error checking make sure m_struct never comes before "{" in a nested struct
+        // In parser during error checking make sure m_struct never comes before "{" in a nested struct
         if message.count > 0 && message[message.count-1] == .SCOPED_STRUCT {
             i2:int = i;
             while file[i2] != #char ":" && i2 <= file.count-1 {
@@ -577,6 +592,14 @@ unknown_token_error :: (r:int,c:int,i:int,file:string) #expand {
                     `it += ident.count - 1;
                     return;
             }
+        }
+        if message.count > 0 && message[message.count-1] == .SCOPED_MATCH {
+            it := `it;
+            ident := add_identifier(it,false);
+            if ident == "default" then array_add(*`tokens,.{"",.k_default}); else array_add(*`tokens,.{ident,.c_match});
+            change_scope(.SCOPED_MATCH_CASE);
+            `it = it;
+            return;
         }
     // Backtrack
     counterLine:int = i;
@@ -682,7 +705,6 @@ check_identifier :: (start:int) -> string,int #expand {
     }
 
     ident:string = builder_to_string(*builder);
-    //`it = i + 1;
     return ident,i;
 }
 
