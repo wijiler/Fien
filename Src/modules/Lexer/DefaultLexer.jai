@@ -382,7 +382,7 @@ lex :: (filename:string) -> [] TOKEN {
             if message.count == 0 {
                 change_scope(.GLOBAL);
             }
-            if message.count != 0 then pop(*message);
+            if message.count > 0 then pop(*message);
             array_reset(*identifiers);
 
             case #char "\r";
@@ -581,16 +581,12 @@ unknown_token_error :: (r:int,c:int,i:int,file:string) #expand {
         
         if message.count > 0 && message[message.count-1] == .SCOPED_STRUCT {
             i2:int = i;
-            error:bool = false;
             while file[i2] != #char ":" && i2 <= file.count-1 {
-                if file[i2] == #char "}"  || file[i2] == #char "{" {
-                    error = true;
-                    break;
-                }
+                if file[i2] == #char "}"  || file[i2] == #char "{" then break;
                 i2 += 1;
             }
             
-            if !error && file[i2] == #char ":" {
+            if  file[i2] == #char ":" {
                     it := i;
                     ident := add_identifier(i,false);
                     array_add(*`tokens,.{ident,.m_struct});
