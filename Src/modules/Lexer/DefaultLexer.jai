@@ -580,12 +580,16 @@ unknown_token_error :: (r:int,c:int,i:int,file:string) #expand {
         // In parser during error checking make sure m_struct never comes before "{" in a nested struct
         if message.count > 0 && message[message.count-1] == .SCOPED_STRUCT {
             i2:int = i;
+            error:bool = false;
             while file[i2] != #char ":" && i2 <= file.count-1 {
-                if file[i2] == #char "}" then break;
+                if file[i2] == #char "}"  || file[i2] == #char "{" {
+                    error = true;
+                    break;
+                }
                 i2 += 1;
             }
             
-            if file[i2] == #char ":" {
+            if !error && file[i2] == #char ":" {
                     it := i;
                     ident := add_identifier(i,false);
                     array_add(*`tokens,.{ident,.m_struct});

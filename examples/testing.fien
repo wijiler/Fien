@@ -7,7 +7,7 @@ enum wah {
 struct foo {
     bar:int
 
-    struct cock  {
+    struct cock bigblackmen {
         balls:int
     }
 }
