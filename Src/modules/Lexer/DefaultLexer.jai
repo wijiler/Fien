@@ -154,12 +154,12 @@ lex :: (filename:string) -> [] TOKEN {
                     i:int = it;
                     while file[i] != #char "{" {
                         i += 1;
+                        array_add(*message,.SCOPED_ENUM);
                     }
                     if file[i] == #char "{" {
                         array_add(*tokens,.{"",.lbrack});
                         find_enum();
                     }
-                    change_scope(.SCOPED_ENUM);
             }
             else if lexer_peek(1) == #char "l" && lexer_peek(2) == #char "s" && lexer_peek(3) == #char "e" {
                     if is_alnum(lexer_peek(4)) then unknown_token_error(r,c,it,file);
@@ -577,7 +577,8 @@ operator== :: (a:TOKEN,b:TOKEN) -> bool {
 }
 
 unknown_token_error :: (r:int,c:int,i:int,file:string) #expand {
-        // In parser during error checking make sure m_struct never comes before "{" in a nested struct
+
+        
         if message.count > 0 && message[message.count-1] == .SCOPED_STRUCT {
             i2:int = i;
             error:bool = false;

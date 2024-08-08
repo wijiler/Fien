@@ -1,6 +1,9 @@
 struct sldhfklsdhf {
-    struct thing SDdasd {
+    struct thing {
 
+    }
+    enum cock {
+        asddas,
     }
     name:int
 }
