@@ -637,7 +637,7 @@ unknown_token_error :: (r:int,c:int,i:int,file:string) #expand {
 
     len := line.count;
     pointerBuilder:String_Builder;
-    for 0..len {
+    for 0..len + 1 {
         append(*pointerBuilder," ");
     }
     pointer:string = builder_to_string(*pointerBuilder);
