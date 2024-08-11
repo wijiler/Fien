@@ -693,7 +693,7 @@ add_identifier :: (start:int,new:bool) -> string #expand {
     ident:string = builder_to_string(*builder);
     if message.count > 0 && new && message[message.count - 1] == .GLOBAL then array_add(*global_idents,ident);
     if new then array_add(*identifiers,ident);
-    `it = i;
+    `it = i - 1;
     return ident;
 }
 

@@ -1,9 +1,13 @@
 struct sldhfklsdhf {
-    struct thing asdasd {
+    struct thing {
 
     }
     enum cock {
         asddas,
     }
     name:int
+}
+
+fn main () {
+    let test:int = 1
 }

@@ -16,12 +16,15 @@ main :: () {
             case;;
         }
     }
+    // TODO: make errors not exit immediately
     tokens := lex(input);
     for token:tokens {
         print("%\n",token);
     }
-
+    ast := parse(tokens);
+    
 }
 
 #import "Basic";
+#import "Parser";
 #import "Lexer";
