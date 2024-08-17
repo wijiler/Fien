@@ -1,10 +1,5 @@
 struct sldhfklsdhf {
-    struct thing {
-
-    }
-    enum cock {
-        asddas,
-    }
+    
     name:int
 }
 

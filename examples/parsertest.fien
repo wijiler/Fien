@@ -1,1 +1,6 @@
+struct foo {
+    
+}
+
+
 let test:int = 1

@@ -20,10 +20,7 @@ MESSAGE :: enum u8 {
     GLOBAL            :: 255;
 }
 
-change_scope :: (scope:MESSAGE) {
-    potential_scope = scope;
-    if message.count != 0 && message[message.count - 1] == .GLOBAL then pop(*message);
-}
+
 
 lex :: (filename:string) -> [] TOKEN {
 
@@ -465,15 +462,15 @@ TOKEN :: struct {
         k_false       :: 235;
 
 
-        eq            :: 234;
-        col           :: 233;
-        lparen        :: 232;
-        rparen        :: 231;
-        lbrack        :: 230;
-        rbrack        :: 229;
-        lbrace        :: 228;
-        rbrace        :: 227;
-        carat         :: 226;
+        eq            :: 234; // =
+        col           :: 233; // :
+        lparen        :: 232; // (
+        rparen        :: 231; // )
+        lbrack        :: 230; // {
+        rbrack        :: 229; // }
+        lbrace        :: 228; // [
+        rbrace        :: 227; // ]
+        carat         :: 226; // ^
 
         r_type        :: 225; // -<
 
@@ -532,7 +529,7 @@ find_enum :: () #expand {
     a_members := split(members,",");
     for member: a_members {
         if member != "" {
-        array_add(*`identifiers,sprint("%.%",`ident,member));
+        if message.count > 1 && message[message.count - 1] == .GLOBAL then array_add(*`global_idents,sprint("%.%",`ident,member)); else array_add(*`identifiers,sprint("%.%",`ident,member));
         array_add(*`tokens,.{member,.identifier});
         }
     }
@@ -819,11 +816,12 @@ lex_arguments :: () -> [] TOKEN #expand {
 lexer_peek :: (x:int) -> u8 #expand {
     return `file[`it + x];
 }
-// grammar :: #run read_entire_file("./modules/lexer.flg");
-// sp :: #run split(grammar,"---");
-// tt :: sp[0];
-// core :: sp[1];
-// args :: sp[2];
+
+change_scope :: (scope:MESSAGE) {
+    potential_scope = scope;
+    if message.count != 0 && message[message.count - 1] == .GLOBAL then pop(*message);
+}
+
 #import "Basic";
 #import "File";
 #import "String";
