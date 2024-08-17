@@ -204,7 +204,7 @@ get_outer_scope_name :: (s:Scope,separator:string) -> string {
     if scope.count == 0 then return "";
     i := scope.count - 1;
     sb:String_Builder;
-    while scope[i].scope == s.scope {
+    while i > 0 && scope[i].scope == s.scope {
         append(*sb,separator);
         append(*sb,scope[i].info);
         i -= 1;
