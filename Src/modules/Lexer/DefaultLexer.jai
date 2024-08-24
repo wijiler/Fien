@@ -20,15 +20,15 @@ MESSAGE :: enum u8 {
     GLOBAL            :: 255;
 }
 
-
+file := "";
 
 lex :: (filename:string) -> [] TOKEN {
 
     tokens: [..] TOKEN;
-
-    file,success := read_entire_file(filename);
+    success:bool;
+    file,success = read_entire_file(filename);
     if !success {
-        print("Could not find file % E001 \n",filename);
+        print("Could not find file %\n",filename);
         exit(1);
     }
     file = to_lower_copy_new(file);
@@ -39,19 +39,19 @@ lex :: (filename:string) -> [] TOKEN {
             case #char "f";
             if lexer_peek(1) == #char "n" {
                 if is_alnum(lexer_peek(2)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens, .{"",.k_fn});
-                array_add(*tokens,.{add_function(it+3,true),.identifier});
+                add_token(.{"",.k_fn,r,c});
+                add_token(.{add_function(it+3,true),.identifier,r,c});
 
                 change_scope(.SCOPED_FN);
             }
             else if lexer_peek(1) == #char "l" && lexer_peek(2) == #char "o" && lexer_peek(3) == #char "a" && lexer_peek(4) == #char "t" { 
                 if is_alnum(lexer_peek(5)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens,.{"",.t_float}); 
+                add_token(.{"",.t_float,r,c}); 
                 it +=4; 
             }
             else if lexer_peek(1) == #char "a" && lexer_peek(2) == #char "l" && lexer_peek(3) == #char "s" && lexer_peek(4) == #char "e" { 
                 if is_alnum(lexer_peek(5)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens,.{"",.k_false}); 
+                add_token(.{"",.k_false,r,c}); 
                 it += 4; 
             }
             else {
@@ -59,25 +59,25 @@ lex :: (filename:string) -> [] TOKEN {
             }
 
             case #char "(";
-            array_add(*tokens,.{"",.lparen});
+            add_token(.{"",.lparen,r,c});
             array_add(*tokens,..lex_arguments());
 
             case #char "i";
             if lexer_peek(1) == #char "n" && lexer_peek(2) == #char "t" { 
                 if is_alnum(lexer_peek(3)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens,.{"",.t_int}); 
+                add_token(.{"",.t_int,r,c}); 
                 it += 2;
             }
             else if lexer_peek(1) == #char "f" {
                 if is_alnum(lexer_peek(2)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens,.{"",.k_if}); 
+                add_token(.{"",.k_if,r,c}); 
                 i:int = it + 2;
                 builder:String_Builder;
                 while i <= file.count - 1 && file[i] != #char "{" {
                     append(*builder,file[i]);
                     i += 1;
                 }
-                array_add(*tokens,.{builder_to_string(*builder),.expression});
+                add_token(.{builder_to_string(*builder),.expression,r,c});
                 it = i - 1;
                 change_scope(.SCOPED_IF);
             }
@@ -88,7 +88,7 @@ lex :: (filename:string) -> [] TOKEN {
             case #char "c";
             if lexer_peek(1) == #char "h" && lexer_peek(2) == #char "a" && lexer_peek(3) == #char "r" {
                 if is_alnum(lexer_peek(4)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens,.{"",.t_char}); 
+                add_token(.{"",.t_char,r,c}); 
                 it += 3;
             }
             else {
@@ -96,12 +96,12 @@ lex :: (filename:string) -> [] TOKEN {
             }
 
             case #char ":"; 
-            array_add(*tokens,.{"",.col});
+            add_token(.{"",.col,r,c});
 
             case #char "b";
             if lexer_peek(1) == #char "o" && lexer_peek(2) == #char "o" && lexer_peek(3) == #char "l" { 
                 if is_alnum(lexer_peek(4)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens,.{"",.t_bool}); 
+                add_token(.{"",.t_bool,r,c}); 
                 it +=3; 
             }
             else {
@@ -112,19 +112,19 @@ lex :: (filename:string) -> [] TOKEN {
             if lexer_peek(1) == #char "t" && lexer_peek(2) == #char "r" {
                 if lexer_peek(3) != #char "u" then {
                     if is_alnum(lexer_peek(3)) then unknown_token_error(r,c,it,file);
-                    array_add(*tokens,.{"",.t_string}); 
+                    add_token(.{"",.t_string,r,c}); 
                     it += 2;
                 }
                 else if lexer_peek(4) == #char "c" && lexer_peek(5) == #char "t" {
                     if is_alnum(lexer_peek(6)) then unknown_token_error(r,c,it,file);
-                    array_add(*tokens, .{"",.k_struct});
+                    add_token(.{"",.k_struct,r,c});
                     // ident
                     i:int = 6;
                     while !is_alnum(file[it+i]) {
                         i += 1;
                     }
                     ident := add_type(it+i,true);
-                    array_add(*tokens,.{ident,.type});
+                    add_token(.{ident,.type,r,c});
                     change_scope(.SCOPED_STRUCT);
                 }
             }
@@ -135,17 +135,10 @@ lex :: (filename:string) -> [] TOKEN {
             case #char "e";
             if lexer_peek(1) == #char "n" && lexer_peek(2) == #char "u" && lexer_peek(3) == #char "m" {
                     if is_alnum(lexer_peek(4)) then unknown_token_error(r,c,it,file);
-                    array_add(*tokens, .{"",.k_enum});
-                    // ident
-                    identcounter:int = 4;
+                    add_token(.{"",.k_enum,r,c});
 
-                    while !is_alnum(file[it+identcounter]) {
-                        identcounter += 1;
-                    }
-
-                    ident := add_type(it+identcounter,true);
-                    array_add(*tokens,.{ident,.type});
-
+                    ident := add_identifier(it+5,false);
+                    if ident == "" then continue; else add_token(.{ident,.type,r,c});
                     // find the enum's members and add them as valid types and identifiers
                     // TODO: make $IDENT$. a type and the types valid identifiers? Might be easier for the parser
                     i:int = it;
@@ -154,15 +147,15 @@ lex :: (filename:string) -> [] TOKEN {
                         array_add(*message,.SCOPED_ENUM);
                     }
                     if file[i] == #char "{" {
-                        array_add(*tokens,.{"",.lbrack});
+                        add_token(.{"",.lbrack,r,c});
                         find_enum();
                     }
             }
             else if lexer_peek(1) == #char "l" && lexer_peek(2) == #char "s" && lexer_peek(3) == #char "e" {
                     if is_alnum(lexer_peek(4)) then unknown_token_error(r,c,it,file);
-                    array_add(*tokens, .{"",.k_else});
+                    add_token(.{"",.k_else,r,c});
                     it += 4;
-                    change_scope(.SCOPED_STRUCT);
+                    change_scope(.SCOPED_ELSE);
             }
             else {
                 check();
@@ -171,8 +164,8 @@ lex :: (filename:string) -> [] TOKEN {
             case #char "l";
             if lexer_peek(1) == #char "e" && lexer_peek(2) == #char "t" {
                 if is_alnum(lexer_peek(3)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens,.{"",.k_let});
-                array_add(*tokens,.{add_identifier(it+4,true),.identifier});
+                add_token(.{"",.k_let,r,c});
+                add_token(.{add_identifier(it+4,true),.identifier,r,c});
             }
             else {
                 check();
@@ -182,8 +175,8 @@ lex :: (filename:string) -> [] TOKEN {
             case #char "r";
             if lexer_peek(1) == #char "e" && lexer_peek(2) == #char "t" {
                 if is_alnum(lexer_peek(3)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens,.{"",.k_ret});
-                array_add(*tokens,.{add_expression(it+4),.expression});
+                add_token(.{"",.k_ret,r,c});
+                add_token(.{add_expression(it+4),.expression,r,c});
             }
             else {
                 check();
@@ -191,7 +184,7 @@ lex :: (filename:string) -> [] TOKEN {
 
             case #char "m";
             if lexer_peek(1) == #char "a" && lexer_peek(2) == #char "t" && lexer_peek(3) == #char "c" && lexer_peek(4) == #char "h" {
-                array_add(*tokens,.{"",.k_match});
+                add_token(.{"",.k_match,r,c});
                 it += 4;
                 change_scope(.SCOPED_MATCH);
             }
@@ -201,17 +194,17 @@ lex :: (filename:string) -> [] TOKEN {
 
 
             case #char "=";
-            array_add(*tokens,.{"",.eq});
-            array_add(*tokens,.{add_expression(it+2),.expression});
+            add_token(.{"",.eq,r,c});
+            add_token(.{add_expression(it+2),.expression,r,c});
 
             case #char "-";
             if lexer_peek(1) == #char "<" {
-                array_add(*tokens,.{add_identifier(it+3,false),.r_type});
+                add_token(.{add_identifier(it+3,false),.r_type,r,c});
             } 
             else if lexer_peek(1) == #char ">" { 
 
-                array_add(*tokens,.{"",.sh_ret});
-                array_add(*tokens,.{add_expression(it+2),.expression});
+                add_token(.{"",.sh_ret,r,c});
+                add_token(.{add_expression(it+2),.expression,r,c});
                 if message.count != 0 && message[message.count - 1] == .SCOPED_FN {
                     pop(*message);
                 }
@@ -227,8 +220,8 @@ lex :: (filename:string) -> [] TOKEN {
                 append(*builder,file[i]);
                 i += 1;
             }
-            if fl then array_add(*tokens,.{builder_to_string(*builder),.float_literal});
-            else array_add(*tokens,.{builder_to_string(*builder),.int_literal});
+            if fl then add_token(.{builder_to_string(*builder),.float_literal,r,c});
+            else add_token(.{builder_to_string(*builder),.int_literal,r,c});
             it = i + 1;
 
             case #char "1";
@@ -240,8 +233,8 @@ lex :: (filename:string) -> [] TOKEN {
                 append(*builder,file[i]);
                 i += 1;
             }
-            if fl then array_add(*tokens,.{builder_to_string(*builder),.float_literal});
-            else array_add(*tokens,.{builder_to_string(*builder),.int_literal});
+            if fl then add_token(.{builder_to_string(*builder),.float_literal,r,c});
+            else add_token(.{builder_to_string(*builder),.int_literal,r,c});
             it = i + 1;
             
             case #char "2";
@@ -253,8 +246,8 @@ lex :: (filename:string) -> [] TOKEN {
                 append(*builder,file[i]);
                 i += 1;
             }
-            if fl then array_add(*tokens,.{builder_to_string(*builder),.float_literal});
-            else array_add(*tokens,.{builder_to_string(*builder),.int_literal});
+            if fl then add_token(.{builder_to_string(*builder),.float_literal,r,c});
+            else add_token(.{builder_to_string(*builder),.int_literal,r,c});
             it = i + 1;
             
             case #char "3";
@@ -266,8 +259,8 @@ lex :: (filename:string) -> [] TOKEN {
                 append(*builder,file[i]);
                 i += 1;
             }
-            if fl then array_add(*tokens,.{builder_to_string(*builder),.float_literal});
-            else array_add(*tokens,.{builder_to_string(*builder),.int_literal});
+            if fl then add_token(.{builder_to_string(*builder),.float_literal,r,c});
+            else add_token(.{builder_to_string(*builder),.int_literal,r,c});
             it = i + 1;
             
             case #char "4";
@@ -279,8 +272,8 @@ lex :: (filename:string) -> [] TOKEN {
                 append(*builder,file[i]);
                 i += 1;
             }
-            if fl then array_add(*tokens,.{builder_to_string(*builder),.float_literal});
-            else array_add(*tokens,.{builder_to_string(*builder),.int_literal});
+            if fl then add_token(.{builder_to_string(*builder),.float_literal,r,c});
+            else add_token(.{builder_to_string(*builder),.int_literal,r,c});
             it = i + 1;
             
             case #char "5";
@@ -292,8 +285,8 @@ lex :: (filename:string) -> [] TOKEN {
                 append(*builder,file[i]);
                 i += 1;
             }
-            if fl then array_add(*tokens,.{builder_to_string(*builder),.float_literal});
-            else array_add(*tokens,.{builder_to_string(*builder),.int_literal});
+            if fl then add_token(.{builder_to_string(*builder),.float_literal,r,c});
+            else add_token(.{builder_to_string(*builder),.int_literal,r,c});
             it = i + 1;
             
             case #char "6";
@@ -305,8 +298,8 @@ lex :: (filename:string) -> [] TOKEN {
                 append(*builder,file[i]);
                 i += 1;
             }
-            if fl then array_add(*tokens,.{builder_to_string(*builder),.float_literal});
-            else array_add(*tokens,.{builder_to_string(*builder),.int_literal});
+            if fl then add_token(.{builder_to_string(*builder),.float_literal,r,c});
+            else add_token(.{builder_to_string(*builder),.int_literal,r,c});
             it = i + 1;
             
             case #char "7";
@@ -318,8 +311,8 @@ lex :: (filename:string) -> [] TOKEN {
                 append(*builder,file[i]);
                 i += 1;
             }
-            if fl then array_add(*tokens,.{builder_to_string(*builder),.float_literal});
-            else array_add(*tokens,.{builder_to_string(*builder),.int_literal});
+            if fl then add_token(.{builder_to_string(*builder),.float_literal,r,c});
+            else add_token(.{builder_to_string(*builder),.int_literal,r,c});
             it = i + 1;
             
             case #char "8";
@@ -331,8 +324,8 @@ lex :: (filename:string) -> [] TOKEN {
                 append(*builder,file[i]);
                 i += 1;
             }
-            if fl then array_add(*tokens,.{builder_to_string(*builder),.float_literal});
-            else array_add(*tokens,.{builder_to_string(*builder),.int_literal});
+            if fl then add_token(.{builder_to_string(*builder),.float_literal,r,c});
+            else add_token(.{builder_to_string(*builder),.int_literal,r,c});
             it = i + 1;
             
             case #char "9";
@@ -344,15 +337,15 @@ lex :: (filename:string) -> [] TOKEN {
                 append(*builder,file[i]);
                 i += 1;
             }
-            if fl then array_add(*tokens,.{builder_to_string(*builder),.float_literal});
-            else array_add(*tokens,.{builder_to_string(*builder),.int_literal});
+            if fl then add_token(.{builder_to_string(*builder),.float_literal,r,c});
+            else add_token(.{builder_to_string(*builder),.int_literal,r,c});
             it = i + 1;
 
 
             case #char "t";
             if lexer_peek(1) == #char "r" && lexer_peek(2) == #char "u" && lexer_peek(3) == #char "e" {
                 if is_alnum(lexer_peek(4)) then unknown_token_error(r,c,it,file);
-                array_add(*tokens,.{"",.k_true});
+                add_token(.{"",.k_true,r,c});
                 it += 4;
             }
             else {
@@ -366,16 +359,16 @@ lex :: (filename:string) -> [] TOKEN {
                 append(*builder,file[i]);
                 i += 1;
             }
-            array_add(*tokens,.{builder_to_string(*builder),.string_literal});
+            add_token(.{builder_to_string(*builder),.string_literal,r,c});
             it = i + 1;
 
             case #char ")";
-            array_add(*tokens,.{"",.rparen});
+            add_token(.{"",.rparen,r,c});
             case #char "{";
-            array_add(*tokens,.{"",.lbrack});
+            add_token(.{"",.lbrack,r,c});
             array_add(*message,potential_scope);
             case #char "}";
-            array_add(*tokens,.{"",.rbrack});
+            add_token(.{"",.rbrack,r,c});
             if message.count == 0 {
                 change_scope(.GLOBAL);
             }
@@ -393,7 +386,7 @@ lex :: (filename:string) -> [] TOKEN {
             case #char "\t";
             c+= 4;
             case #char "^";
-            array_add(*tokens,.{"",.carat});
+            add_token(.{"",.carat,r,c});
 
             case;
             check();
@@ -408,23 +401,23 @@ check :: () #expand {
     ident,skip := check_identifier(`it,`file);
     
     if array_find(identifiers,ident) {
-        array_add(*`tokens,.{ident,.identifier});
+        array_add(*`tokens,.{ident,.identifier,r,c});
         `it = skip;
     }
     else if array_find(global_idents,ident) {
-        array_add(*`tokens,.{ident,.identifier});
+        array_add(*`tokens,.{ident,.identifier,r,c});
         `it = skip;
     }
     else if array_find(global_functions,ident) {
-        array_add(*`tokens,.{ident,.identifier});
+        array_add(*`tokens,.{ident,.identifier,r,c});
         `it = skip;
     }
         else if array_find(functions,ident) {
-        array_add(*`tokens,.{ident,.identifier});
+        array_add(*`tokens,.{ident,.identifier,r,c});
         `it = skip;
     }
     else if array_find(ltypes,ident) {
-        array_add(*`tokens,.{ident,.type});
+        array_add(*`tokens,.{ident,.type,r,c});
         `it = skip;
     }
     else {
@@ -484,6 +477,7 @@ TOKEN :: struct {
         t_string      :: 218;
         // other custom tokens work, as this is a u8 IF_NEEDED: increase to a u16
     }
+    r,c:int = 0;
 }
 
 #scope_file
@@ -530,14 +524,16 @@ find_enum :: () #expand {
     for member: a_members {
         if member != "" {
         if message.count > 1 && message[message.count - 1] == .GLOBAL then array_add(*`global_idents,sprint("%.%",`ident,member)); else array_add(*`identifiers,sprint("%.%",`ident,member));
-        array_add(*`tokens,.{member,.identifier});
+        array_add(*`tokens,.{member,.identifier,r,c});
         }
     }
     `r += skip;
     `it = e - 1;
 }
 
-
+add_token :: (tok:TOKEN) #expand {
+    array_add(*`tokens,tok);
+}
 
 
 string_slice :: (T:string,from:int,to:int) -> string {
@@ -586,7 +582,7 @@ unknown_token_error :: (r:int,c:int,i:int,file:string) #expand {
             if  file[i2] == #char ":" {
                     it := i;
                     ident := add_identifier(i,false);
-                    array_add(*`tokens,.{ident,.m_struct});
+                    array_add(*`tokens,.{ident,.m_struct,r,c});
                     `it += ident.count - 1;
                     return;
             }
@@ -594,7 +590,7 @@ unknown_token_error :: (r:int,c:int,i:int,file:string) #expand {
         if message.count > 0 && message[message.count-1] == .SCOPED_MATCH {
             it := `it;
             ident := add_identifier(it,false);
-            if ident == "default" then array_add(*`tokens,.{"",.k_default}); else array_add(*`tokens,.{ident,.c_match});
+            if ident == "default" then array_add(*`tokens,.{"",.k_default,r,c}); else array_add(*`tokens,.{ident,.c_match,r,c});
             change_scope(.SCOPED_MATCH_CASE);
             `it = it;
             return;
@@ -691,6 +687,7 @@ add_identifier :: (start:int,new:bool) -> string #expand {
     if message.count > 0 && new && message[message.count - 1] == .GLOBAL then array_add(*global_idents,ident);
     if new then array_add(*identifiers,ident);
     `it = i - 1;
+    c += ident.count + 1;
     return ident;
 }
 
@@ -738,10 +735,10 @@ lex_arguments :: () -> [] TOKEN #expand {
     while `file[i] != #char ")" {
         if `file[i] =={
             case #char ":";
-            array_add(*argument_tokens,.{"",.col});
+            array_add(*argument_tokens,.{"",.col,r,c});
 
             case #char "i";
-            if `file[i+1] == #char "n" && `file[i+2] == #char "t" { array_add(*argument_tokens,.{"",.t_int}); i += 2;}
+            if `file[i+1] == #char "n" && `file[i+2] == #char "t" { array_add(*argument_tokens,.{"",.t_int,r,c}); i += 2;}
             else {
                 builder:String_Builder;
 
@@ -750,12 +747,12 @@ lex_arguments :: () -> [] TOKEN #expand {
                     append(*builder,`file[i2]);
                     i2 += 1;
                 }
-                array_add(*argument_tokens,.{sprint("%",builder_to_string(*builder)),.identifier});
+                array_add(*argument_tokens,.{sprint("%",builder_to_string(*builder)),.identifier,r,c});
                 i = i2 - 1;
             }
 
             case #char "c";
-            if `file[i+1] == #char "h" && `file[i+2] == #char "a" && `file[i+3] == #char "r" { array_add(*argument_tokens,.{"",.t_char}); i += 3;}
+            if `file[i+1] == #char "h" && `file[i+2] == #char "a" && `file[i+3] == #char "r" { array_add(*argument_tokens,.{"",.t_char,r,c}); i += 3;}
             else {
             builder:String_Builder;
 
@@ -764,11 +761,11 @@ lex_arguments :: () -> [] TOKEN #expand {
                     append(*builder,`file[i2]);
                     i2 += 1;
                 }
-                array_add(*argument_tokens,.{sprint("%",builder_to_string(*builder)),.identifier});
+                array_add(*argument_tokens,.{sprint("%",builder_to_string(*builder)),.identifier,r,c});
                 i = i2 - 1;
             }
             case #char "f";
-            if `file[i+1] == #char "l" && `file[i+2] == #char "o" && `file[i+3] == #char "a" && `file[i+4] == #char "t" { array_add(*argument_tokens,.{"",.t_float}); i +=4; }
+            if `file[i+1] == #char "l" && `file[i+2] == #char "o" && `file[i+3] == #char "a" && `file[i+4] == #char "t" { array_add(*argument_tokens,.{"",.t_float,r,c}); i +=4; }
             else {
             builder:String_Builder;
 
@@ -777,11 +774,11 @@ lex_arguments :: () -> [] TOKEN #expand {
                     append(*builder,`file[i2]);
                     i2 += 1;
                 }
-                array_add(*argument_tokens,.{sprint("%",builder_to_string(*builder)),.identifier});
+                array_add(*argument_tokens,.{sprint("%",builder_to_string(*builder)),.identifier,r,c});
                 i = i2 - 1;
             }
             case #char "b";
-            if `file[i+1] == #char "o" && `file[i+2] == #char "o" && `file[i+3] == #char "l" { array_add(*argument_tokens,.{"",.t_bool}); i+=3; }
+            if `file[i+1] == #char "o" && `file[i+2] == #char "o" && `file[i+3] == #char "l" { array_add(*argument_tokens,.{"",.t_bool,r,c}); i+=3; }
             else {
             builder:String_Builder;
 
@@ -790,7 +787,7 @@ lex_arguments :: () -> [] TOKEN #expand {
                     append(*builder,`file[i2]);
                     i2 += 1;
                 }
-                array_add(*argument_tokens,.{sprint("%",builder_to_string(*builder)),.identifier});
+                array_add(*argument_tokens,.{sprint("%",builder_to_string(*builder)),.identifier,r,c});
                 i = i2 - 1;
             }
             case #char " ";;
@@ -804,7 +801,7 @@ lex_arguments :: () -> [] TOKEN #expand {
                 append(*builder,`file[i2]);
                 i2 += 1;
             }
-            array_add(*argument_tokens,.{sprint("%",builder_to_string(*builder)),.identifier});
+            array_add(*argument_tokens,.{sprint("%",builder_to_string(*builder)),.identifier,r,c});
             i = i2 - 1;
         }
         i+=1;

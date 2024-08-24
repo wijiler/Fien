@@ -21,8 +21,9 @@ Node :: struct {
         expr:exprNode;
         fnNode:functionNode;
     }
-    children:*Node;
+    children:[..] Node;
 }
+
 
 AST :: struct {
     RootNode:Node;
@@ -33,6 +34,8 @@ parse :: (tokens:[] TOKEN) -> AST {
     tree:AST;
     for token:tokens {
         if token.tokentype =={
+            case .k_enum;
+            parse_enum(tokens,it_index);
             case .k_let;
             node := parse_variable(tokens,it_index,*tree);
             add_node(node,*tree);
@@ -49,7 +52,11 @@ add_node :: (node:Node,tree:*AST) {
         tree.RootNode = node;
 }
 
-parse_enum :: () {
+parse_enum :: (tokens:[] TOKEN, start:int) {
+    name := tokens[start + 1].lexeme;
+    if tokens[start + 1].tokentype != .type {
+        error(tokens[start+1].r,tokens[start+1].c,file,"Enum at line %:% missing identifier",tokens[start+1].r,tokens[start+1].c);
+    }
 
 }
 
@@ -273,3 +280,4 @@ TYPE :: struct {
 
 #import "Lexer";
 #import "Basic";
+#import "Erroring";

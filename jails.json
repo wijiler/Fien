@@ -3,8 +3,8 @@
         "./src/modules"
     ],
     "roots": [
-        "./src/first.jai",
+        "first.jai",
         "./src/main.jai"
     ],
-    "build_root": "./src/first.jai"
+    "build_root": "first.jai"
 }

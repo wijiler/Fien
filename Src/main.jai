@@ -22,7 +22,7 @@ main :: () {
         print("%\n",token);
     }
     ast := parse(tokens);
-    
+    print("%\n",ast);
 }
 
 #import "Basic";
