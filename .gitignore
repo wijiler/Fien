@@ -1,0 +1,6 @@
+Binaries/
+.vs/
+Fien/FienCompiler
+Fien-Frontend/FienFrontend
+**.sln
+**.vcxproj

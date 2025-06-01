@@ -1,0 +1,19 @@
+export thisisanamespace :: {
+    thing :: () {
+        match thing {
+
+        }
+        if thing {
+
+        }
+        else {
+            
+        }
+    }
+    // enums are their own namespace, so items from this are thisisanamespace.test.x
+    test :: enum {
+        test,
+        goobers,
+        ninety,
+    }
+}

@@ -1,0 +1,2 @@
+-I../Fien-Frontend/include/
+-std=c++20
