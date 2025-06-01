@@ -10,15 +10,10 @@ Ast::Ast()
 Ast::~Ast()
 {
     free(root);
-    free(errors);
     head = nullptr;
-    error_count = 0;
 }
 AstNode::NodeData::~NodeData()
 {
     // do nothing, fuck you c++ for giving unions constructors and destructors
     // Bjarne, how high were you?
-}
-AstNode::AstNode(Ast *ast, AstNode::NodeKind kind, AstNode::NodeData data)
-{
 }

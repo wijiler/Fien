@@ -54,7 +54,9 @@ namespace Fien
             Declaration,
             CodeBlock,
             If,
-        };
+            Else,
+            Struct,
+        } kind;
         union NodeData
         {
             struct ExprNode
@@ -86,24 +88,44 @@ namespace Fien
             struct DeclarationNode
             {
                 std::string ident;
-                ExprNode initial_value;
-                DeclarationNote *note;
+                DeclarationNote *note; // nullptr if no notes
+                ExprNode value;
                 ValidTypes type;
+                uint8_t is_const;
             };
             DeclarationNode declaration;
             struct CodeBlockNode
             {
                 CodeBlockNode *parent_block; // nullptr if global scope
+                ScopeEntryNode *scope;       // nullptr if global scope (will be your parent block)
+                AstNode *children;
+                uint64_t child_count;
             };
+            CodeBlockNode code_block;
             struct IfNode
             {
                 ExprNode conditional;
-                CodeBlockNode block;
+                CodeBlockNode code;
+                CodeBlockNode else_statement;
             };
+            IfNode if_statement;
+            struct StructNode
+            {
+                CodeBlockNode block;
+                DeclarationNote *note; // nullptr if no notes
+            };
+            StructNode struct_node;
+            struct ProcNode
+            {
+                std::string ident;
+                DeclarationNode *args;
+                CodeBlockNode block;
+                DeclarationNote *note; // nullptr if no notes
+                uint8_t arg_count;     // you're genuinely sick if you have more than 256 args and dont combine it into a struct type
+            };
+            ProcNode procedure;
             ~NodeData();
-        };
-        AstNode(Ast *ast, NodeKind kind, NodeData data);
-        ~AstNode();
+        } data;
     };
 
     struct AstError
@@ -115,8 +137,7 @@ namespace Fien
     {
         AstNode *root;
         AstNode *head;
-        AstError *errors;
-        uint32_t error_count = 0;
+
         static inline constexpr uint32_t AstNodeCount = 40000;
 
         Ast();
