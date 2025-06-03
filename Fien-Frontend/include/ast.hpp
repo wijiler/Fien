@@ -23,6 +23,7 @@ namespace Fien
         BitwiseXor,
         LogicalNot,
         ArrayIndex,
+        MemberAccess,
     };
     enum class ValidTypes : uint8_t
     {
@@ -76,8 +77,8 @@ namespace Fien
             struct DeclarationNode
             {
                 char *ident;
-                DeclarationNote *note; // nullptr if no notes
-                ExprNode value;
+                DeclarationNote *note; // nullptr if no note
+                ExprNode value;        // nullptr if uninitialized
                 ValidTypes type;
                 uint8_t is_const;
             };
@@ -86,7 +87,7 @@ namespace Fien
             {
                 AstNode *children;
                 CodeBlockNode *parent_block; // nullptr if global scope
-                ScopeEntryNode *scope;       // nullptr if global scope (will be your parent block)
+                ScopeEntryNode scope;        // scope created by this codeblock
                 uint64_t child_count;
             };
             CodeBlockNode code_block;
@@ -119,6 +120,24 @@ namespace Fien
                 uint8_t arg_count; // you're genuinely sick if you have more than 256 args and dont combine it into a struct type
             };
             ProcNode procedure;
+            struct MatchCaseNode
+            {
+                CodeBlockNode code;
+                ExprNode condition;
+            };
+            struct MatchNode
+            {
+                MatchCaseNode *cases;
+                ExprNode condition;
+                uint64_t case_count;
+            };
+            MatchNode match;
+            struct ProcCallNode
+            {
+                ProcNode *proc;
+                ExprNode *args;
+            };
+            ProcCallNode proc_call;
             ~NodeData();
         } data;
 
@@ -134,6 +153,7 @@ namespace Fien
             Else,
             Struct,
             Enum,
+            Match,
         } kind;
     };
 

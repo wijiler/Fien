@@ -12,6 +12,7 @@ namespace Fien
         uint32_t error_count = 0;
 
         void open(std::string filename);
-        Ast parse();
+        void parse();
+        void close();
     };
 } // namespace Fien
