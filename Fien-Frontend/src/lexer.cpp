@@ -5,10 +5,81 @@
 
 using namespace Fien;
 
-Token::Token(TokenType type, uint64_t index)
+Token::Token(TokenType type, uint64_t index, uint64_t end)
 {
     this->type = type;
     start = index;
+    this->end = end;
+}
+Token::Token(TokenType type, uint64_t start)
+{
+#define settok(c)        \
+    this->start = start; \
+    this->end = start + c;
+#define casetok(c, t)  \
+    case TokenType::t: \
+    {                  \
+        settok(c);     \
+    }                  \
+    break;
+    switch (type)
+    {
+        // symbol shit
+        casetok(0, Colon);
+        casetok(0, Equ);
+        casetok(0, LParen);
+        casetok(0, RParen);
+        casetok(0, Dot);
+        casetok(0, Into);
+        casetok(0, Pipe);
+        casetok(0, Not);
+        casetok(0, Dollar);
+        casetok(0, Asterisk);
+        casetok(0, Plus);
+        casetok(0, Minus);
+        casetok(0, LBrace);
+        casetok(0, RBrace);
+        casetok(0, LBrack);
+        casetok(0, RBrack);
+        casetok(0, FSlash);
+        casetok(0, BSlash);
+        casetok(0, SemiColon);
+        casetok(0, Comma);
+        casetok(0, Hash);
+        casetok(0, Ampersand);
+        casetok(0, Modulo);
+        casetok(0, Note);
+        casetok(0, GreaterThan);
+        casetok(0, LessThan);
+        casetok(0, DoubleQuote);
+        casetok(0, SingleQuote);
+        // Types
+        casetok(2, Int64);
+        casetok(2, Int32);
+        casetok(2, Int16);
+        casetok(1, Int8);
+        casetok(2, Uint64);
+        casetok(2, Uint32);
+        casetok(2, Uint16);
+        casetok(1, Uint8);
+        casetok(2, Float64);
+        casetok(2, Float32);
+        casetok(3, Bool);
+        casetok(2, String);
+        // Keywords
+        casetok(5, Struct);
+        casetok(3, Enum);
+        casetok(5, Export);
+        casetok(4, Match);
+        casetok(1, If);
+        casetok(3, Else);
+        casetok(0, EndOfFile);
+        default:
+        {
+        };
+    }
+#undef settok
+#undef casetok
 }
 
 void Lexer::open(std::string filename)
@@ -51,11 +122,11 @@ Token Lexer::consume()
         }
     }
 
-    Token tok(TokenType::Unknown, index);
+    Token tok(TokenType::Unknown, index, index);
 
     if (index >= file.length())
     {
-        tok = Token(TokenType::EndOfFile, index);
+        tok = Token(TokenType::EndOfFile, index, index);
         return tok;
     }
     // lex

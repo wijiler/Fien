@@ -56,8 +56,12 @@ namespace Fien
             struct ScopeEntryNode
             {
                 char *name;
+                ScopeEntryNode *parent; // nullptr if global scope
             };
             ScopeEntryNode scope_entry;
+            struct ScopeExitNode
+            {
+            } scope_exit;
             struct BinOpExprNode
             {
                 ExprNode rhs, lhs;
@@ -86,8 +90,7 @@ namespace Fien
             struct CodeBlockNode
             {
                 AstNode *children;
-                CodeBlockNode *parent_block; // nullptr if global scope
-                ScopeEntryNode scope;        // scope created by this codeblock
+                ScopeEntryNode scope; // scope created by this codeblock
                 uint64_t child_count;
             };
             CodeBlockNode code_block;
@@ -108,16 +111,14 @@ namespace Fien
             {
                 DeclarationNode *members; // empty enum is error, always full, always constant
                 DeclarationNote *note;    // nullptr if no note
-                char *name;
                 uint64_t member_count;
             };
             struct ProcNode
             {
                 CodeBlockNode block;
-                DeclarationNode *args;
+                DeclarationNode *args; // nullptr if no args
                 DeclarationNote *note; // nullptr if no note
-                char *ident;
-                uint8_t arg_count; // you're genuinely sick if you have more than 256 args and dont combine it into a struct type
+                uint8_t arg_count;     // you're genuinely sick if you have more than 256 args and dont combine it into a struct type
             };
             ProcNode procedure;
             struct MatchCaseNode
@@ -134,8 +135,9 @@ namespace Fien
             MatchNode match;
             struct ProcCallNode
             {
-                ProcNode *proc;
+                char *fun;
                 ExprNode *args;
+                uint8_t args_count;
             };
             ProcCallNode proc_call;
             ~NodeData();
@@ -154,6 +156,8 @@ namespace Fien
             Struct,
             Enum,
             Match,
+            Procdef,
+            Proccall,
         } kind;
     };
 

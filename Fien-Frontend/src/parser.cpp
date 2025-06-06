@@ -1,4 +1,6 @@
+#ifdef DEBUG
 #include <iostream>
+#endif
 #include <parser.hpp>
 using namespace Fien;
 
@@ -18,13 +20,15 @@ void Parser::parse()
         {
             case TokenType::Identifier:
             {
+                std::string ident = std::string(tok.end - tok.start, '\0');
+                ident.copy(lexer.file.data(), tok.end - tok.start, tok.start);
                 Token next_tok = lexer.peek();
                 switch (next_tok.type)
                 {
-                        // declaration, function call, constant declaration, struct, enum, function definition
+                        // declaration, constant declaration, struct, enum, function definition
                     case TokenType::Colon:
                     {
-                        AstNode node;
+                        AstNode *node = ast.head;
                         lexer.consume();
                         next_tok = lexer.peek();
                         // now either a constant declaration, function definition, or struct/enum definition
@@ -33,20 +37,58 @@ void Parser::parse()
                             lexer.consume();
                             next_tok = lexer.peek();
                         }
-                        else if (next_tok.type == TokenType::LParen)
+                        else
                         {
-                            // TODO: Multifile
                         }
                     }
                     break;
                     case TokenType::Dot:
                     {
-                        AstNode node;
-                        node.data.uni_op_expr = {
+                        AstNode *node = ast.head;
+                        node->data.uni_op_expr = {
                             {&tok.start},
                             OperationKind::MemberAccess,
                         };
-                        *ast.head = node;
+                        ast.head += 1;
+                    }
+                    break;
+                    // function call
+                    case TokenType::LParen:
+                    {
+                        std::string ident = std::string(tok.end - tok.start, '\0');
+                        ident.copy(lexer.file.data(), tok.end - tok.start, tok.start);
+                        AstNode *node = ast.head;
+
+                        node->kind = AstNode::NodeKind::Proccall;
+                        AstNode *oldhead = ast.head;
+                        std::string *buf = new std::string[256];
+                        ast.head += 1;
+                        uint8_t argInc = 0;
+                        while (tok.type != TokenType::RParen)
+                        {
+                            if (tok.type == TokenType::Identifier)
+                            {
+                                buf[argInc].copy(lexer.file.data(), tok.end - tok.start, tok.start);
+                                AstNode *arg = ast.head;
+                                arg->kind = AstNode::NodeKind::Expression;
+                                arg->data.expr.data = buf[argInc].data();
+                                argInc += 1;
+                                ast.head += 1;
+                            }
+                            tok = lexer.consume();
+                        }
+                        tok = lexer.consume();
+                        node->data.proc_call.fun = ident.data();
+                        if (argInc > 0)
+                        {
+                            node->data.proc_call.args = &(oldhead + 1)->data.expr;
+                            node->data.proc_call.args_count = argInc;
+                        }
+                        else
+                        {
+                            node->data.proc_call.args = nullptr;
+                            node->data.proc_call.args_count = 0;
+                        }
                         ast.head += 1;
                     }
                     break;

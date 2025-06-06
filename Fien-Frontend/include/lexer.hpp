@@ -42,7 +42,6 @@ namespace Fien
         // Literal
 
         NumericalLiteral,
-        StringLiteral,
 
         // Type
 
@@ -104,7 +103,6 @@ namespace Fien
         "DoubleQuote",
         "SingleQuote",
         "NumericalLiteral",
-        "StringLiteral",
         "Int64",
         "Float64",
         "Int32",
@@ -129,9 +127,10 @@ namespace Fien
 
     struct Token
     {
-        uint64_t start;
+        uint64_t start, end;
         TokenType type;
 
+        Token(TokenType type, uint64_t start, uint64_t end);
         Token(TokenType type, uint64_t start);
         ~Token() = default;
     };
@@ -139,8 +138,8 @@ namespace Fien
     struct Lexer
     {
         std::string file;
-        uint64_t index = 0;
         char *head;
+        uint64_t index = 0;
 
         Lexer() = default;
         ~Lexer() = default;
@@ -185,28 +184,30 @@ namespace Fien
         {
             if (std::isdigit(*head))
             {
-                Token lit(TokenType::NumericalLiteral, index);
+                uint64_t start = index;
                 while (std::isdigit(*head) || *head == '.')
                 {
                     this->AdvanceChar();
                 }
+                Token lit(TokenType::NumericalLiteral, start, index - 1);
                 head -= 1;
                 *tok = lit;
             }
             else if (std::isalpha(*head))
             {
-                Token lit(TokenType::Identifier, index);
+                uint64_t start = index;
                 while (std::isalnum(*head))
                 {
                     this->AdvanceChar();
                 }
+                Token lit(TokenType::Identifier, start, index - 1);
                 head -= 1;
                 *tok = lit;
             }
 
             else
             {
-                *tok = Token(TokenType::Unknown, index);
+                *tok = Token(TokenType::Unknown, index, index);
             }
         }
     };

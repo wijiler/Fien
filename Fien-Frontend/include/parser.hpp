@@ -8,7 +8,7 @@ namespace Fien
     {
         Lexer lexer;
         Ast ast;
-        AstError *errors;
+        AstError *parsing_errors;
         uint32_t error_count = 0;
 
         void open(std::string filename);
