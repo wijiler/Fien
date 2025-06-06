@@ -97,6 +97,16 @@ way, removing the freedom of programming.
     name* to dereference a pointer
     *name to get a pointer to a declaration
 */
+// namespaces
+/*
+structs and enums are given their own namespaces, but if you want to
+create your own custom namespace it's really easy
+*/
+export thisisanamespace :: {
+}
+// anything not in an export block is considered private
+// you can also use export on individual functions / structs/ enums
+// if you do not want a namespace
 ```
 
 ### Lexer editing
