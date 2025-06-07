@@ -94,7 +94,7 @@ way, removing the freedom of programming.
 // Pointer syntax
 /*
     *type to create a pointer
-    name* to dereference a pointer
+    name.* to dereference a pointer
     *name to get a pointer to a declaration
 */
 // namespaces
